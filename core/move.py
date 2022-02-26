@@ -27,6 +27,6 @@ class Move:
         return [Hex.add(p, self.direction.value) for p in self.pieces()]
 
     def is_inline(self):
-        if self.end is None:
+        if self.end is None or self.end == self.start:
             return False
         return Hex.subtract(self.pieces()[1], self.start) == self.direction.value
