@@ -1,10 +1,16 @@
-from tkinter import Tk
+from helpers.point_to_hex import point_to_hex
 from core.app_config import AppConfig
 from core.board_cell_state import BoardCellState
 from core.game import Game
 from core.move import Move
 from core.display import Display
+from core.hex import Hex
 from config import APP_NAME
+
+def offset_true_hex(board, cell):
+    q, r = cell.astuple()
+    q += board.height // 2
+    return Hex(q, r)
 
 class App:
     def __init__(self):
@@ -21,10 +27,16 @@ class App:
         self.game = Game(layout=self._config.starting_layout)
 
     def _select_cell(self, cell):
-        if not self.selection and self.game_board.get(cell) != BoardCellState.EMPTY:
-            self.selection = Move(cell)
-        elif self.selection and self.selection.end is None and self.game_board.get(cell) != BoardCellState.EMPTY:
-            self.selection.end = cell
+        board_cell = offset_true_hex(self.game_board, cell)
+        if not self.selection and self.game_board.get(board_cell) != BoardCellState.EMPTY:
+            self.selection = Move(board_cell)
+        elif self.selection and self.selection.end is None:
+            if self.game_board.get(board_cell) == BoardCellState.EMPTY:
+                self.selection = None
+            else:
+                self.selection.end = board_cell
+                if not self.selection.pieces():
+                    self.selection = None
         elif self.selection and self.selection.end:
             self.selection = None
 

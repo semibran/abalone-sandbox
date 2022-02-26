@@ -1,6 +1,6 @@
 from math import sqrt
-from tkinter import Tk, Canvas
 from helpers.point_to_hex import point_to_hex
+from tkinter import Tk, Canvas
 from core.board_cell_state import BoardCellState
 from core.hex import Hex
 from config import (
@@ -12,17 +12,11 @@ from config import (
 import colors.palette as palette
 from colors.darken import darken_color
 
-def point_to_hex_offset(point, radius, board):
-    q, r = point_to_hex(point, radius)
-    q += r
-    if r > board.height // 2:
-        q -= (r - board.height // 2)
-    return Hex(q, r)
-
 def render_board(canvas, board, selection=None, pos=(0, 0)):
     canvas.create_rectangle(0, 0, BOARD_WIDTH, BOARD_HEIGHT, fill="#fff")
     for cell, val in board.enumerate():
         q, r = cell.astuple()
+        q += r * (r <= board.height // 2)
         x = (q * BOARD_CELL_SIZE
             + (BOARD_MAXCOLS - board.width(r) + 1) * BOARD_CELL_SIZE / 2
             + pos[0])
@@ -61,10 +55,10 @@ class Display:
         self._canvas.pack()
         self._canvas.bind("<Button-1>", lambda event: (
             rw := BOARD_CELL_SIZE / 2,
-            rh := BOARD_CELL_SIZE / (sqrt(3) / 2) / 2,
+            rh := BOARD_CELL_SIZE / sqrt(3),
             x := event.x - rw - (BOARD_MAXCOLS - BOARD_SIZE) * rw,
             y := event.y - rw,
-            actions["select_cell"](point_to_hex_offset((x, y), rh, app.game_board))
+            actions["select_cell"](Hex(*point_to_hex((x, y), rh)))
         ))
 
         self.render(app)

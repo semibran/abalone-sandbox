@@ -30,6 +30,7 @@ class Board:
         if cell not in self:
             return None
         q, r = cell.astuple()
+        q -= r * (r <= self.height // 2)
         return self._data[r][q]
 
     def set(self, cell, data):
@@ -41,5 +42,6 @@ class Board:
         items = []
         for r, line in enumerate(self._data):
             for q, val in enumerate(line):
+                q -= r * (r <= self.height // 2)
                 items.append((Hex(q, r), val))
         return items
