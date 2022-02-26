@@ -8,6 +8,9 @@ class Move:
     end: Hex = None
     direction: HexDirection = None
 
+    def head(self):
+        return self.end or self.start
+
     def pieces(self):
         if self.end is None:
             return (self.start,)

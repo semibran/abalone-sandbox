@@ -8,4 +8,4 @@ COLORMAP_DARKEN = {
 def darken_color(color):
     return (COLORMAP_DARKEN[color]
         if color in COLORMAP_DARKEN
-        else None)
+        else color)

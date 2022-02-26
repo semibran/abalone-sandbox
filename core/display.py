@@ -16,7 +16,7 @@ def render_board(canvas, board, selection=None, pos=(0, 0)):
     canvas.create_rectangle(0, 0, BOARD_WIDTH, BOARD_HEIGHT, fill="#fff")
     for cell, val in board.enumerate():
         q, r = cell.astuple()
-        q += r * (r <= board.height // 2)
+        q -= (board.height // 2 - r) * (r <= board.height // 2)
         x = (q * BOARD_CELL_SIZE
             + (BOARD_MAXCOLS - board.width(r) + 1) * BOARD_CELL_SIZE / 2
             + pos[0])
@@ -25,6 +25,7 @@ def render_board(canvas, board, selection=None, pos=(0, 0)):
             + pos[1])
 
         is_cell_selected = selection and selection.pieces() and cell in selection.pieces()
+        is_cell_selection_head = selection and cell == selection.head()
         circle_fill = {
             BoardCellState.EMPTY: palette.COLOR_SILVER,
             BoardCellState.WHITE: palette.COLOR_BLUE,
@@ -32,7 +33,7 @@ def render_board(canvas, board, selection=None, pos=(0, 0)):
         }[val]
         if is_cell_selected:
             circle_fill = darken_color(circle_fill)
-        circle_outline = (palette.COLOR_CYAN if is_cell_selected else "")
+        circle_outline = (palette.COLOR_CYAN if is_cell_selection_head else "")
         canvas.create_oval(
             x - MARBLE_SIZE / 2, y - MARBLE_SIZE / 2,
             x + MARBLE_SIZE / 2, y + MARBLE_SIZE / 2,

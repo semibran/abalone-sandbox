@@ -42,6 +42,7 @@ class Board:
         items = []
         for r, line in enumerate(self._data):
             for q, val in enumerate(line):
-                q -= r * (r <= self.height // 2)
-                items.append((Hex(q, r), val))
+                q += (self.height // 2 - r) * (r <= self.height // 2)
+                item = (Hex(q, r), val)
+                items.append(item)
         return items
