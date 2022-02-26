@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from enum import Enum
 from core.hex import Hex, HexDirection
 
 @dataclass
@@ -21,3 +20,6 @@ class Move:
                 pieces.append(Hex.add(pieces[-1], direction.value))
                 if pieces[-1] == self.end:
                     return pieces
+
+    def targets(self):
+        return [Hex.add(p, self.direction) for p in self.pieces()]

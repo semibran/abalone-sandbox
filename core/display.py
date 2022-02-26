@@ -129,7 +129,7 @@ def render_board(canvas, board, selection=None, pos=(0, 0)):
 
     for cell, cell_state in board_items:
         q, r = cell.astuple()
-        q -= (board.height // 2 - r) * (r <= board.height // 2)
+        q -= board.offset(r)
         x = (q * BOARD_CELL_SIZE
             + (BOARD_MAXCOLS - board.width(r) + 1) * BOARD_CELL_SIZE / 2
             + pos[0])

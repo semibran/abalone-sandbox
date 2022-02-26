@@ -12,6 +12,15 @@ def offset_true_hex(board, cell):
     q += board.height // 2
     return Hex(q, r)
 
+def apply_move(board, move):
+    unit = board.get(move.head())
+
+    for cell in move.pieces():
+        board.set(cell, BoardCellState.EMPTY)
+
+    for cell in move.targets():
+        board.set(cell, unit)
+
 class App:
     def __init__(self):
         self.game = None
@@ -27,18 +36,21 @@ class App:
         self.game = Game(layout=self._config.starting_layout)
 
     def _select_cell(self, cell):
-        board_cell = offset_true_hex(self.game_board, cell)
-        if not self.selection and self.game_board.get(board_cell) != BoardCellState.EMPTY:
-            self.selection = Move(board_cell)
-        elif self.selection and self.selection.end is None:
-            if self.game_board.get(board_cell) == BoardCellState.EMPTY:
-                self.selection = None
-            else:
-                self.selection.end = board_cell
-                if not self.selection.pieces():
-                    self.selection = None
-        elif self.selection and self.selection.end:
+        cell = offset_true_hex(self.game_board, cell)
+
+        if not self.selection and self.game_board.get(cell) != BoardCellState.EMPTY:
+            self.selection = Move(cell)
+
+        elif self.selection and self.game_board.get(cell) == BoardCellState.EMPTY:
+            if Hex.adjacent(cell, self.selection.head()):
+                self.selection.direction = Hex.subtract(cell, self.selection.head())
+                apply_move(self.game_board, self.selection)
             self.selection = None
+
+        elif self.selection and self.selection.end is None:
+            self.selection.end = cell
+            if not self.selection.pieces():
+                self.selection = None
 
         self._display.render(self)
 

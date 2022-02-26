@@ -12,6 +12,9 @@ class Board:
     def __init__(self):
         self._data = generate_empty_board(size=5)
 
+    def offset(self, r):
+        return (self.height // 2 - r) * (r <= self.height // 2)
+
     def width(self, r):
         return (len(self._data[r])
             if r >= 0 and r < len(self._data)
@@ -30,19 +33,20 @@ class Board:
         if cell not in self:
             return None
         q, r = cell.astuple()
-        q -= r * (r <= self.height // 2)
+        q -= self.offset(r)
         return self._data[r][q]
 
     def set(self, cell, data):
-        if cell in self:
-            q, r = cell.astuple()
+        q, r = cell.astuple()
+        q -= self.offset(r)
+        if Hex(q, r) in self:
             self._data[r][q] = data
 
     def enumerate(self):
         items = []
         for r, line in enumerate(self._data):
             for q, val in enumerate(line):
-                q += (self.height // 2 - r) * (r <= self.height // 2)
+                q += self.offset(r)
                 item = (Hex(q, r), val)
                 items.append(item)
         return items
