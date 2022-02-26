@@ -13,9 +13,7 @@ import colors.palette as palette
 from colors.transform import darken_color, lighten_color
 
 def render_marble(canvas, pos, color, selected, focused):
-    circle_color = darken_color(color) if selected else color
-    circle_outline = palette.COLOR_LIGHTBLUE if focused else darken_color(circle_color)
-    circle_outline_width = 3 if focused else 2
+    MARBLE_COLOR = darken_color(color) if selected else color
 
     x, y = pos
     s = MARBLE_SIZE
@@ -24,10 +22,23 @@ def render_marble(canvas, pos, color, selected, focused):
     canvas.create_oval(
         x - s / 2, y - s / 2,
         x + s / 2, y + s / 2,
-        fill=circle_color,
-        outline=circle_outline,
-        width=circle_outline_width,
+        fill=MARBLE_COLOR,
+        outline=darken_color(MARBLE_COLOR),
+        width=2,
     )
+
+    # marble outline
+    if focused:
+        RING_WIDTH = 3
+        RING_MARGIN = 2
+        RING_SIZE = s / 2 + 2
+        canvas.create_oval(
+            x - RING_SIZE - RING_WIDTH, y - RING_SIZE - RING_WIDTH,
+            x + RING_SIZE + RING_MARGIN, y + RING_SIZE + RING_MARGIN,
+            fill="",
+            outline=lighten_color(color),
+            width=RING_WIDTH,
+        )
 
     # marble highlights
     HIGHLIGHT_SIZE = s * 3 / 4
@@ -36,14 +47,14 @@ def render_marble(canvas, pos, color, selected, focused):
     canvas.create_oval(
         HIGHLIGHT_X, HIGHLIGHT_Y,
         HIGHLIGHT_X + HIGHLIGHT_SIZE, HIGHLIGHT_Y + HIGHLIGHT_SIZE,
-        fill=lighten_color(circle_color),
+        fill=lighten_color(MARBLE_COLOR),
         outline="",
     )
     HIGHLIGHT_SHADOW_SIZE = HIGHLIGHT_SIZE + HIGHLIGHT_SIZE / 32
     canvas.create_oval(
         x - s / 2 + s / 16, y - s / 2 + s / 16,
         x - s / 2 + s / 16 + HIGHLIGHT_SHADOW_SIZE, y - s / 2 + s / 16 + HIGHLIGHT_SHADOW_SIZE,
-        fill=darken_color(circle_color),
+        fill=darken_color(MARBLE_COLOR),
         outline="",
     )
     HIGHLIGHT_BALANCE_SIZE = HIGHLIGHT_SIZE / 3
@@ -52,7 +63,7 @@ def render_marble(canvas, pos, color, selected, focused):
     canvas.create_oval(
         HIGHLIGHT_BALANCE_X, HIGHLIGHT_BALANCE_Y,
         HIGHLIGHT_BALANCE_X + HIGHLIGHT_BALANCE_SIZE, HIGHLIGHT_BALANCE_Y + HIGHLIGHT_BALANCE_SIZE,
-        fill=circle_color,
+        fill=MARBLE_COLOR,
         outline="",
     )
 
@@ -63,7 +74,7 @@ def render_marble(canvas, pos, color, selected, focused):
     canvas.create_oval(
         SHINE_X, SHINE_Y,
         SHINE_X + SHINE_SIZE, SHINE_Y + SHINE_SIZE,
-        fill=lighten_color(circle_color),
+        fill=lighten_color(MARBLE_COLOR),
         outline="",
     )
 
@@ -86,7 +97,7 @@ def render_marble(canvas, pos, color, selected, focused):
     canvas.create_oval(
         SHINE_SECONDARY_X, SHINE_SECONDARY_Y,
         SHINE_SECONDARY_X + SHINE_SECONDARY_SIZE, SHINE_SECONDARY_Y + SHINE_SECONDARY_SIZE,
-        fill=lighten_color(circle_color),
+        fill=lighten_color(MARBLE_COLOR),
         outline="",
     )
 
@@ -111,7 +122,12 @@ def render_board_cell(canvas, pos, cell, cell_state, selection):
 
 def render_board(canvas, board, selection=None, pos=(0, 0)):
     canvas.create_rectangle(0, 0, BOARD_WIDTH, BOARD_HEIGHT, fill="#fff")
-    for cell, cell_state in board.enumerate():
+
+    board_items = board.enumerate()
+    if selection:
+        board_items.sort(key=lambda x: x[0] == selection.head())
+
+    for cell, cell_state in board_items:
         q, r = cell.astuple()
         q -= (board.height // 2 - r) * (r <= board.height // 2)
         x = (q * BOARD_CELL_SIZE
@@ -120,7 +136,6 @@ def render_board(canvas, board, selection=None, pos=(0, 0)):
         y = (r * (BOARD_CELL_SIZE * 7 / 8)
             + BOARD_CELL_SIZE / 2
             + pos[1])
-
         render_board_cell(canvas, (x, y), cell, cell_state, selection)
 
 class Display:
