@@ -50,16 +50,22 @@ def render_marble(canvas, pos, color, selected, focused):
         fill=lighten_color(MARBLE_COLOR),
         outline="",
     )
-    HIGHLIGHT_SHADOW_SIZE = HIGHLIGHT_SIZE + HIGHLIGHT_SIZE / 32
+    HIGHLIGHT_NEGATIVE_SIZE = HIGHLIGHT_SIZE + HIGHLIGHT_SIZE / 32
     canvas.create_oval(
         x - s / 2 + s / 16, y - s / 2 + s / 16,
-        x - s / 2 + s / 16 + HIGHLIGHT_SHADOW_SIZE, y - s / 2 + s / 16 + HIGHLIGHT_SHADOW_SIZE,
+        x - s / 2 + s / 16 + HIGHLIGHT_NEGATIVE_SIZE, y - s / 2 + s / 16 + HIGHLIGHT_NEGATIVE_SIZE,
         fill=MARBLE_COLOR,
+        outline="",
+    )
+    canvas.create_oval(
+        x - s / 2 + s / 4, y - s / 32,
+        x + s / 2 - s / 4, y - s / 32 + s / 3,
+        fill=darken_color(MARBLE_COLOR),
         outline="",
     )
     HIGHLIGHT_BALANCE_SIZE = HIGHLIGHT_SIZE / 3
     HIGHLIGHT_BALANCE_X = x - HIGHLIGHT_SIZE / 8
-    HIGHLIGHT_BALANCE_Y = y - HIGHLIGHT_SIZE / 3
+    HIGHLIGHT_BALANCE_Y = y - HIGHLIGHT_SIZE / 6
     canvas.create_oval(
         HIGHLIGHT_BALANCE_X, HIGHLIGHT_BALANCE_Y,
         HIGHLIGHT_BALANCE_X + HIGHLIGHT_BALANCE_SIZE, HIGHLIGHT_BALANCE_Y + HIGHLIGHT_BALANCE_SIZE,

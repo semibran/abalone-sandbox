@@ -30,10 +30,10 @@ class Board:
             and q >= 0 and q < self.width(r))
 
     def __getitem__(self, cell):
-        if cell not in self:
-            return None
         q, r = cell.astuple()
         q -= self.offset(r)
+        if Hex(q, r) not in self:
+            return None
         return self._data[r][q]
 
     def __setitem__(self, cell, data):
