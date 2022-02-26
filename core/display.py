@@ -130,7 +130,7 @@ def render_board_cell(canvas, pos, cell, cell_state, selection):
         render_marble(canvas, pos, color=marble_color, selected=is_cell_selected, focused=is_cell_focused)
 
 def render_board(canvas, board, turn=None, player_marbles={}, selection=None, pos=(0, 0)):
-    canvas.create_rectangle(0, 0, BOARD_WIDTH, BOARD_HEIGHT, fill="#fff")
+    canvas.delete("all") # TODO: smart redrawing
 
     if turn and player_marbles:
         render_marble(
