@@ -12,19 +12,19 @@ def offset_true_hex(board, cell):
     return Hex(q, r)
 
 def apply_move(board, move):
-    unit = board.get(move.head())
+    unit = board[move.head()]
 
     for cell in move.pieces():
-        board.set(cell, BoardCellState.EMPTY)
+        board[cell] = BoardCellState.EMPTY
 
     for cell in move.targets():
-        board.set(cell, unit)
+        board[cell] = unit
 
 def is_move_legal(board, move):
     move_pieces = move.pieces()
     return next((False for t in move.targets() if (
         t not in move_pieces
-        and board.get(t) != BoardCellState.EMPTY
+        and board[t] != BoardCellState.EMPTY
     )), True)
 
 class App:
@@ -44,10 +44,10 @@ class App:
     def _select_cell(self, cell):
         cell = offset_true_hex(self.game_board, cell)
 
-        if not self.selection and self.game_board.get(cell) != BoardCellState.EMPTY:
+        if not self.selection and self.game_board[cell] != BoardCellState.EMPTY:
             self.selection = Move(cell)
 
-        elif self.selection and self.game_board.get(cell) == BoardCellState.EMPTY:
+        elif self.selection and self.game_board[cell] == BoardCellState.EMPTY:
             if Hex.adjacent(cell, self.selection.head()):
                 self.selection.direction = Hex.subtract(cell, self.selection.head())
                 if is_move_legal(self.game_board, self.selection):
@@ -55,7 +55,7 @@ class App:
             self.selection = None
 
         elif (self.selection and self.selection.end is None
-        and self.game_board.get(cell) == self.game_board.get(self.selection.head())):
+        and self.game_board[cell] == self.game_board[self.selection.head()]):
             self.selection.end = cell
             if not self.selection.pieces():
                 self.selection = None

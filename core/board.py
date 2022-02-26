@@ -29,14 +29,14 @@ class Board:
         return (r >= 0 and r < self.height
             and q >= 0 and q < self.width(r))
 
-    def get(self, cell):
+    def __getitem__(self, cell):
         if cell not in self:
             return None
         q, r = cell.astuple()
         q -= self.offset(r)
         return self._data[r][q]
 
-    def set(self, cell, data):
+    def __setitem__(self, cell, data):
         q, r = cell.astuple()
         q -= self.offset(r)
         if Hex(q, r) in self:

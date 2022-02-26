@@ -13,7 +13,7 @@ def apply_board_data(board, board_data):
     for r, line in enumerate(board_data):
         for q, val in enumerate(line):
             q += board.offset(r)
-            board.set(Hex(q, r), BoardCellState(val))
+            board[Hex(q, r)] = BoardCellState(val)
     return board
 
 def setup_board(board_layout):
