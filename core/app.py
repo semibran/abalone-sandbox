@@ -1,4 +1,3 @@
-from helpers.point_to_hex import point_to_hex
 from core.app_config import AppConfig
 from core.board_cell_state import BoardCellState
 from core.game import Game
@@ -20,6 +19,13 @@ def apply_move(board, move):
 
     for cell in move.targets():
         board.set(cell, unit)
+
+def is_move_legal(board, move):
+    move_pieces = move.pieces()
+    return next((False for t in move.targets() if (
+        t not in move_pieces
+        and board.get(t) != BoardCellState.EMPTY
+    )), True)
 
 class App:
     def __init__(self):
@@ -44,13 +50,18 @@ class App:
         elif self.selection and self.game_board.get(cell) == BoardCellState.EMPTY:
             if Hex.adjacent(cell, self.selection.head()):
                 self.selection.direction = Hex.subtract(cell, self.selection.head())
-                apply_move(self.game_board, self.selection)
+                if is_move_legal(self.game_board, self.selection):
+                    apply_move(self.game_board, self.selection)
             self.selection = None
 
-        elif self.selection and self.selection.end is None:
+        elif (self.selection and self.selection.end is None
+        and self.game_board.get(cell) == self.game_board.get(self.selection.head())):
             self.selection.end = cell
             if not self.selection.pieces():
                 self.selection = None
+
+        else:
+            self.selection = None
 
         self._display.render(self)
 
