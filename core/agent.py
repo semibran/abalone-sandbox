@@ -8,7 +8,7 @@ class Agent:
     @classmethod
     def request_move(cls, board, player_unit):
         player_moves = cls._enumerate_player_moves(board, player_unit)
-        return choice(player_moves)
+        return choice(player_moves) if player_moves else None
 
     @classmethod
     def _enumerate_player_moves(cls, board, player_unit):

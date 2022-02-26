@@ -26,20 +26,21 @@ class Board:
 
     def __contains__(self, cell):
         q, r = cell.astuple()
+        q -= self.offset(r)
         return (r >= 0 and r < self.height
             and q >= 0 and q < self.width(r))
 
     def __getitem__(self, cell):
+        if cell not in self:
+            return None
         q, r = cell.astuple()
         q -= self.offset(r)
-        if Hex(q, r) not in self:
-            return None
         return self._data[r][q]
 
     def __setitem__(self, cell, data):
-        q, r = cell.astuple()
-        q -= self.offset(r)
-        if Hex(q, r) in self:
+        if cell in self:
+            q, r = cell.astuple()
+            q -= self.offset(r)
             self._data[r][q] = data
 
     def enumerate(self):

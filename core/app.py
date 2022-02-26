@@ -85,7 +85,8 @@ class App:
                 board=self.game_board,
                 player_unit=self.PLAYER_MARBLES[self.game.turn]
             )
-            self.game.perform_move(cpu_move)
+            if cpu_move:
+                self.game.perform_move(cpu_move)
 
     def start(self):
         self._new_game()
