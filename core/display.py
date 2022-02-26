@@ -31,7 +31,7 @@ def render_board(canvas, board, selection=None, pos=(0, 0)):
             BoardCellState.BLACK: "#c36",
         }[val]
         circle_outline = ("#9cf"
-            if (q, r) == selection
+            if selection and selection.pieces() and (q, r) in selection.pieces()
             else "")
         canvas.create_oval(
             x - MARBLE_SIZE / 2, y - MARBLE_SIZE / 2,
