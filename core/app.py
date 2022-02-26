@@ -12,13 +12,29 @@ def offset_true_hex(board, cell):
     return Hex(q, r)
 
 def apply_move(board, move):
+    num_ejected = 0
     unit = board[move.head()]
 
     for cell in move.pieces():
         board[cell] = BoardCellState.EMPTY
 
-    for cell in move.targets():
+    # attempt sumito
+    move_targets = move.targets()
+    defender_cell = move_targets[-1]
+    defender_unit = board[defender_cell]
+    if defender_unit not in (BoardCellState.EMPTY, unit):
+        num_defenders = count_marbles_in_line(board, defender_cell, move.direction)
+        for _ in range(num_defenders):
+            defender_cell = Hex.add(defender_cell, move.direction)
+            if defender_cell not in board:
+                num_ejected += 1
+                break
+            board[defender_cell] = defender_unit
+
+    for cell in move_targets:
         board[cell] = unit
+
+    return num_ejected
 
 def is_move_target_empty(board, move):
     move_pieces = move.pieces()
