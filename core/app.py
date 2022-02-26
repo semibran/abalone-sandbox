@@ -1,22 +1,18 @@
 from tkinter import Tk
 from core.app_config import AppConfig
 from core.game import Game
+from core.display import Display
 from config import APP_NAME
 
 class App:
     def __init__(self):
         self._config = AppConfig()
         self._game = None
-        self._window = None
+        self._display = Display(title=APP_NAME)
 
     def _new_game(self):
         self._game = Game(layout=self._config.starting_layout)
 
-    def _open_window(self):
-        self._window = Tk()
-        self._window.title(APP_NAME)
-        self._window.mainloop()
-
     def start(self):
         self._new_game()
-        self._open_window()
+        self._display.open(self._game.board)
