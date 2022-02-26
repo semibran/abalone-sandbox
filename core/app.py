@@ -11,12 +11,13 @@ def offset_true_hex(board, cell):
     q += board.height // 2
     return Hex(q, r)
 
-player_marbles = {
-    Player.ONE: BoardCellState.WHITE,
-    Player.TWO: BoardCellState.BLACK
-}
-
 class App:
+
+    PLAYER_MARBLES = {
+        Player.ONE: BoardCellState.WHITE,
+        Player.TWO: BoardCellState.BLACK
+    }
+
     def __init__(self):
         self.game = None
         self.selection = None
@@ -33,7 +34,7 @@ class App:
     def _select_cell(self, cell):
         cell = offset_true_hex(self.game_board, cell)
 
-        if not self.selection and self.game_board[cell] == player_marbles[self.game.turn]:
+        if not self.selection and self.game_board[cell] == App.PLAYER_MARBLES[self.game.turn]:
             self.selection = Move(cell)
 
         elif self.selection and self.game_board[cell] == BoardCellState.EMPTY:

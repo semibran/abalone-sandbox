@@ -12,11 +12,16 @@ from config import (
 import colors.palette as palette
 from colors.transform import darken_color, lighten_color
 
-def render_marble(canvas, pos, color, selected, focused):
+MARBLE_COLORS = {
+    BoardCellState.WHITE: palette.COLOR_BLUE,
+    BoardCellState.BLACK: palette.COLOR_RED,
+}
+
+def render_marble(canvas, pos, color, size=MARBLE_SIZE, selected=False, focused=False):
     MARBLE_COLOR = darken_color(color) if selected else color
 
     x, y = pos
-    s = MARBLE_SIZE
+    s = size
 
     # marble body
     canvas.create_oval(
@@ -121,14 +126,19 @@ def render_board_cell(canvas, pos, cell, cell_state, selection):
     )
 
     if cell_state != BoardCellState.EMPTY:
-        marble_color = {
-            BoardCellState.WHITE: palette.COLOR_BLUE,
-            BoardCellState.BLACK: palette.COLOR_RED,
-        }[cell_state]
+        marble_color = MARBLE_COLORS[cell_state]
         render_marble(canvas, pos, color=marble_color, selected=is_cell_selected, focused=is_cell_focused)
 
-def render_board(canvas, board, selection=None, pos=(0, 0)):
+def render_board(canvas, board, turn=None, player_marbles={}, selection=None, pos=(0, 0)):
     canvas.create_rectangle(0, 0, BOARD_WIDTH, BOARD_HEIGHT, fill="#fff")
+
+    if turn and player_marbles:
+        render_marble(
+            canvas,
+            pos=(BOARD_CELL_SIZE / 4, BOARD_CELL_SIZE / 4),
+            color=MARBLE_COLORS[player_marbles[turn]],
+            size=BOARD_CELL_SIZE / 4,
+        )
 
     board_items = board.enumerate()
     if selection:
@@ -169,4 +179,10 @@ class Display:
         self._window.mainloop()
 
     def render(self, app):
-        render_board(self._canvas, app.game_board, selection=app.selection)
+        render_board(
+            canvas=self._canvas,
+            board=app.game_board,
+            turn=app.game.turn,
+            player_marbles=app.PLAYER_MARBLES,
+            selection=app.selection,
+        )

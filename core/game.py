@@ -61,4 +61,3 @@ class Game:
     def perform_move(self, move):
         apply_move(self.board, move)
         self.turn = Player.next(self.turn)
-        print(self.turn)
