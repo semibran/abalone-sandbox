@@ -18,6 +18,10 @@ def render_marble(canvas, pos, color, selected, focused):
     x, y = pos
     s = MARBLE_SIZE
 
+    if selected:
+        x -= 4
+        y -= 4
+
     # marble body
     canvas.create_oval(
         x - s / 2, y - s / 2,
@@ -105,15 +109,16 @@ def render_board_cell(canvas, pos, cell, cell_state, selection):
     is_cell_selected = selection and selection.pieces() and cell in selection.pieces()
     is_cell_focused = selection and cell == selection.head()
 
-    if cell_state == BoardCellState.EMPTY:
-        x, y = pos
-        canvas.create_oval(
-            x - MARBLE_SIZE / 2, y - MARBLE_SIZE / 2,
-            x + MARBLE_SIZE / 2, y + MARBLE_SIZE / 2,
-            fill=palette.COLOR_SILVER,
-            outline="",
-        )
-    else:
+    # draw empty slot
+    x, y = pos
+    canvas.create_oval(
+        x - MARBLE_SIZE / 2, y - MARBLE_SIZE / 2,
+        x + MARBLE_SIZE / 2, y + MARBLE_SIZE / 2,
+        fill=palette.COLOR_SILVER,
+        outline="",
+    )
+
+    if cell_state != BoardCellState.EMPTY:
         marble_color = {
             BoardCellState.WHITE: palette.COLOR_BLUE,
             BoardCellState.BLACK: palette.COLOR_RED,
