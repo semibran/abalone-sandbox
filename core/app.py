@@ -1,6 +1,6 @@
 from core.app_config import AppConfig
 from core.board_cell_state import BoardCellState
-from core.game import Game
+from core.game import Game, Player, is_move_target_empty, count_marbles_in_line
 from core.move import Move
 from core.display import Display
 from core.hex import Hex
@@ -11,48 +11,10 @@ def offset_true_hex(board, cell):
     q += board.height // 2
     return Hex(q, r)
 
-def apply_move(board, move):
-    num_ejected = 0
-    unit = board[move.head()]
-
-    for cell in move.pieces():
-        board[cell] = BoardCellState.EMPTY
-
-    # attempt sumito
-    move_targets = move.targets()
-    defender_cell = move_targets[-1]
-    defender_unit = board[defender_cell]
-    if defender_unit not in (BoardCellState.EMPTY, unit):
-        num_defenders = count_marbles_in_line(board, defender_cell, move.direction)
-        for _ in range(num_defenders):
-            defender_cell = Hex.add(defender_cell, move.direction)
-            if defender_cell not in board:
-                num_ejected += 1
-                break
-            board[defender_cell] = defender_unit
-
-    for cell in move_targets:
-        board[cell] = unit
-
-    return num_ejected
-
-def is_move_target_empty(board, move):
-    move_pieces = move.pieces()
-    return next((False for t in move.targets() if (
-        t not in move_pieces
-        and board[t] != BoardCellState.EMPTY
-    )), True)
-
-def count_marbles_in_line(board, cell, direction):
-    count = 0
-    unit = board[cell]
-    if unit == BoardCellState.EMPTY:
-        return count
-
-    while board[cell] == unit:
-        count += 1
-        cell = Hex.add(cell, direction)
-    return count
+player_marbles = {
+    Player.ONE: BoardCellState.WHITE,
+    Player.TWO: BoardCellState.BLACK
+}
 
 class App:
     def __init__(self):
@@ -71,14 +33,14 @@ class App:
     def _select_cell(self, cell):
         cell = offset_true_hex(self.game_board, cell)
 
-        if not self.selection and self.game_board[cell] != BoardCellState.EMPTY:
+        if not self.selection and self.game_board[cell] == player_marbles[self.game.turn]:
             self.selection = Move(cell)
 
         elif self.selection and self.game_board[cell] == BoardCellState.EMPTY:
             if Hex.adjacent(cell, self.selection.head()):
                 self.selection.direction = Hex.subtract(cell, self.selection.head())
                 if is_move_target_empty(self.game_board, self.selection):
-                    apply_move(self.game_board, self.selection)
+                    self._apply_selection()
             self.selection = None
 
         elif (self.selection and self.selection.end is None
@@ -102,13 +64,17 @@ class App:
                 attackers = len(self.selection.pieces())
                 defenders = count_marbles_in_line(self.game_board, cell, self.selection.direction)
                 if attackers > defenders:
-                    apply_move(self.game_board, self.selection)
+                    self._apply_selection()
             self.selection = None
 
         else:
             self.selection = None
 
         self._display.render(self)
+
+    def _apply_selection(self):
+        self.game.perform_move(self.selection)
+        self.selection = None
 
     def start(self):
         self._new_game()
