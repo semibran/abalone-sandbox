@@ -88,6 +88,13 @@ class App:
                 self.selection = None
 
         elif (self.selection and self.selection.end
+        and self.game_board[cell] == self.game_board[self.selection.head()]):
+            self.selection.start = self.selection.end
+            self.selection.end = cell
+            if not self.selection.pieces():
+                self.selection = None
+
+        elif (self.selection and self.selection.end
         and Hex.adjacent(cell, self.selection.head())
         and self.game_board[cell] != self.game_board[self.selection.head()]):
             self.selection.direction = Hex.subtract(cell, self.selection.head())
