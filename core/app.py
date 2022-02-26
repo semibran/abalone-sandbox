@@ -1,5 +1,6 @@
 from tkinter import Tk
 from core.app_config import AppConfig
+from core.board_cell_state import BoardCellState
 from core.game import Game
 from core.display import Display
 from config import APP_NAME
@@ -19,9 +20,12 @@ class App:
         self.game = Game(layout=self._config.starting_layout)
 
     def _select_cell(self, cell):
-        self.selection = (cell
-            if cell in self.game_board
-            else None)
+        if self.game_board.get(cell) == BoardCellState.EMPTY:
+            self.selection = None
+        else:
+            self.selection = (cell
+                if cell in self.game_board
+                else None)
         self._display.render(self)
 
     def start(self):

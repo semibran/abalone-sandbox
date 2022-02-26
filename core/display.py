@@ -1,6 +1,7 @@
 from math import sqrt
 from tkinter import Tk, Canvas
 from helpers.point_to_hex import point_to_hex
+from core.board_cell_state import BoardCellState
 from config import (
     BOARD_SIZE, BOARD_MAXCOLS,
     BOARD_CELL_SIZE,
@@ -25,9 +26,9 @@ def render_board(canvas, board, selection=None, pos=(0, 0)):
             + BOARD_CELL_SIZE / 2
             + pos[1])
         circle_fill = {
-            0: "#ccc",
-            1: "#36c",
-            2: "#c36",
+            BoardCellState.EMPTY: "#ccc",
+            BoardCellState.WHITE: "#36c",
+            BoardCellState.BLACK: "#c36",
         }[val]
         circle_outline = ("#9cf"
             if (q, r) == selection
