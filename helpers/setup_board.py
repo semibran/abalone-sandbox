@@ -1,6 +1,7 @@
 from json import loads
 from core.board import Board
 from core.board_cell_state import BoardCellState
+from core.hex import Hex
 
 def resolve_board_layout(board_layout):
     file_name = board_layout.value
@@ -11,7 +12,7 @@ def resolve_board_layout(board_layout):
 def apply_board_data(board, board_data):
     for r, line in enumerate(board_data):
         for q, val in enumerate(line):
-            board.set((q, r), BoardCellState(val))
+            board.set(Hex(q, r), BoardCellState(val))
     return board
 
 def setup_board(board_layout):

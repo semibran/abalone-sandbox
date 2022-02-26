@@ -2,6 +2,7 @@ from math import sqrt
 from tkinter import Tk, Canvas
 from helpers.point_to_hex import point_to_hex
 from core.board_cell_state import BoardCellState
+from core.hex import Hex
 from config import (
     BOARD_SIZE, BOARD_MAXCOLS,
     BOARD_CELL_SIZE,
@@ -14,11 +15,12 @@ def point_to_hex_offset(point, radius, board):
     q += r
     if r > board.height // 2:
         q -= (r - board.height // 2)
-    return q, r
+    return Hex(q, r)
 
 def render_board(canvas, board, selection=None, pos=(0, 0)):
     canvas.create_rectangle(0, 0, BOARD_WIDTH, BOARD_HEIGHT, fill="#fff")
-    for (q, r), val in board.enumerate():
+    for cell, val in board.enumerate():
+        q, r = cell.astuple()
         x = (q * BOARD_CELL_SIZE
             + (BOARD_MAXCOLS - board.width(r) + 1) * BOARD_CELL_SIZE / 2
             + pos[0])
@@ -31,7 +33,7 @@ def render_board(canvas, board, selection=None, pos=(0, 0)):
             BoardCellState.BLACK: "#c36",
         }[val]
         circle_outline = ("#9cf"
-            if selection and selection.pieces() and (q, r) in selection.pieces()
+            if selection and selection.pieces() and cell in selection.pieces()
             else "")
         canvas.create_oval(
             x - MARBLE_SIZE / 2, y - MARBLE_SIZE / 2,
