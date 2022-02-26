@@ -10,6 +10,7 @@ from config import (
 
 def point_to_hex_offset(point, radius, board):
     q, r = point_to_hex(point, radius)
+    q += r
     if r > board.height // 2:
         q -= (r - board.height // 2)
     return q, r
