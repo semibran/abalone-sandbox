@@ -1,6 +1,8 @@
+from math import sqrt
 from tkinter import Tk, Canvas
+from helpers.point_to_hex import point_to_hex
 from config import (
-    BOARD_MAXCOLS,
+    BOARD_SIZE, BOARD_MAXCOLS,
     BOARD_CELL_SIZE,
     BOARD_WIDTH, BOARD_HEIGHT,
     MARBLE_SIZE,
@@ -37,6 +39,13 @@ class Display:
 
         self._canvas = Canvas(self._window, width=BOARD_WIDTH, height=BOARD_HEIGHT, highlightthickness=0)
         self._canvas.pack()
+        self._canvas.bind("<Button-1>", lambda event: (
+            rw := BOARD_CELL_SIZE / 2,
+            rh := BOARD_CELL_SIZE / (sqrt(3) / 2) / 2,
+            x := event.x - rw - (BOARD_MAXCOLS - BOARD_SIZE) * rw,
+            y := event.y - rw,
+            print(point_to_hex((x, y), rh))
+        ))
         render_board(self._canvas, board)
 
         self._window.mainloop()
