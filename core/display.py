@@ -9,6 +9,8 @@ from config import (
     BOARD_WIDTH, BOARD_HEIGHT,
     MARBLE_SIZE,
 )
+import colors.palette as palette
+from colors.darken import darken_color
 
 def point_to_hex_offset(point, radius, board):
     q, r = point_to_hex(point, radius)
@@ -27,14 +29,16 @@ def render_board(canvas, board, selection=None, pos=(0, 0)):
         y = (r * (BOARD_CELL_SIZE * 7 / 8)
             + BOARD_CELL_SIZE / 2
             + pos[1])
+
+        is_cell_selected = selection and selection.pieces() and cell in selection.pieces()
         circle_fill = {
-            BoardCellState.EMPTY: "#ccc",
-            BoardCellState.WHITE: "#36c",
-            BoardCellState.BLACK: "#c36",
+            BoardCellState.EMPTY: palette.COLOR_SILVER,
+            BoardCellState.WHITE: palette.COLOR_BLUE,
+            BoardCellState.BLACK: palette.COLOR_RED,
         }[val]
-        circle_outline = ("#9cf"
-            if selection and selection.pieces() and cell in selection.pieces()
-            else "")
+        if is_cell_selected:
+            circle_fill = darken_color(circle_fill)
+        circle_outline = (palette.COLOR_CYAN if is_cell_selected else "")
         canvas.create_oval(
             x - MARBLE_SIZE / 2, y - MARBLE_SIZE / 2,
             x + MARBLE_SIZE / 2, y + MARBLE_SIZE / 2,
