@@ -15,19 +15,23 @@ class Board:
             if r >= 0 and r < len(self._data)
             else None)
 
-    def contains(self, cell):
+    @property
+    def height(self):
+        return len(self._data)
+
+    def __contains__(self, cell):
         q, r = cell
-        return (r >= 0 and r < len(self._data)
-            and q >= 0 and q < len(self._data[r]))
+        return (r >= 0 and r < self.height
+            and q >= 0 and q < self.width(r))
 
     def get(self, cell):
-        if not self.contains(cell):
+        if cell not in self:
             return None
         q, r = cell
         return self._data[r][q]
 
     def set(self, cell, data):
-        if self.contains(cell):
+        if cell in self:
             q, r = cell
             self._data[r][q] = data
 
