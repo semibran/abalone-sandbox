@@ -3,7 +3,8 @@ from core.board_cell_state import BoardCellState
 from core.game import Game, Player, is_move_target_empty, count_marbles_in_line
 from core.move import Move
 from core.display import Display
-from core.hex import Hex
+from core.hex import Hex, HexDirection
+from core.agent import Agent
 from config import APP_NAME
 
 def offset_true_hex(board, cell):
@@ -39,7 +40,8 @@ class App:
 
         elif self.selection and self.game_board[cell] == BoardCellState.EMPTY:
             if Hex.adjacent(cell, self.selection.head()):
-                self.selection.direction = Hex.subtract(cell, self.selection.head())
+                normal = Hex.subtract(cell, self.selection.head())
+                self.selection.direction = HexDirection.resolve(normal)
                 if is_move_target_empty(self.game_board, self.selection):
                     self._apply_selection()
             self.selection = None
@@ -60,7 +62,8 @@ class App:
         elif (self.selection and self.selection.end
         and Hex.adjacent(cell, self.selection.head())
         and self.game_board[cell] != self.game_board[self.selection.head()]):
-            self.selection.direction = Hex.subtract(cell, self.selection.head())
+            normal = Hex.subtract(cell, self.selection.head())
+            self.selection.direction = HexDirection.resolve(normal)
             if self.selection.is_inline():
                 attackers = len(self.selection.pieces())
                 defenders = count_marbles_in_line(self.game_board, cell, self.selection.direction)
@@ -76,6 +79,13 @@ class App:
     def _apply_selection(self):
         self.game.perform_move(self.selection)
         self.selection = None
+
+        if self.game.turn == Player.TWO:
+            cpu_move = Agent.request_move(
+                board=self.game_board,
+                player_unit=self.PLAYER_MARBLES[self.game.turn]
+            )
+            self.game.perform_move(cpu_move)
 
     def start(self):
         self._new_game()

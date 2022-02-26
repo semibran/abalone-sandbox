@@ -11,7 +11,7 @@ class Move:
         return self.end or self.start
 
     def pieces(self):
-        if self.end is None:
+        if self.end is None or self.end == self.start:
             return (self.start,)
 
         for direction in HexDirection:
@@ -21,10 +21,12 @@ class Move:
                 if pieces[-1] == self.end:
                     return pieces
 
+        return ()
+
     def targets(self):
-        return [Hex.add(p, self.direction) for p in self.pieces()]
+        return [Hex.add(p, self.direction.value) for p in self.pieces()]
 
     def is_inline(self):
         if self.end is None:
             return False
-        return Hex.subtract(self.pieces()[1], self.start) == self.direction
+        return Hex.subtract(self.pieces()[1], self.start) == self.direction.value

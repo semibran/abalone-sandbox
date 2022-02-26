@@ -33,3 +33,7 @@ class HexDirection(Enum):
     E = Hex(1, 0)
     SW = Hex(-1, 1)
     SE = Hex(0, 1)
+
+    @staticmethod
+    def resolve(direction):
+        return next((d for d in HexDirection if d.value == direction), None)

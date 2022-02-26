@@ -17,7 +17,7 @@ def apply_move(board, move):
     if defender_unit not in (BoardCellState.EMPTY, unit):
         num_defenders = count_marbles_in_line(board, defender_cell, move.direction)
         for _ in range(num_defenders):
-            defender_cell = Hex.add(defender_cell, move.direction)
+            defender_cell = Hex.add(defender_cell, move.direction.value)
             if defender_cell not in board:
                 num_ejected += 1
                 break
@@ -27,6 +27,9 @@ def apply_move(board, move):
         board[cell] = unit
 
     return num_ejected
+
+def is_move_legal(board, move):
+    return is_move_target_empty(board, move)
 
 def is_move_target_empty(board, move):
     move_pieces = move.pieces()
@@ -43,7 +46,7 @@ def count_marbles_in_line(board, cell, direction):
 
     while board[cell] == unit:
         count += 1
-        cell = Hex.add(cell, direction)
+        cell = Hex.add(cell, direction.value)
     return count
 
 class Player(Enum):
