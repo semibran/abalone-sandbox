@@ -23,3 +23,8 @@ class Move:
 
     def targets(self):
         return [Hex.add(p, self.direction) for p in self.pieces()]
+
+    def is_inline(self):
+        if self.end is None:
+            return False
+        return Hex.subtract(self.pieces()[1], self.start) == self.direction

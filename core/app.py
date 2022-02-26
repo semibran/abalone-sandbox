@@ -20,12 +20,23 @@ def apply_move(board, move):
     for cell in move.targets():
         board[cell] = unit
 
-def is_move_legal(board, move):
+def is_move_target_empty(board, move):
     move_pieces = move.pieces()
     return next((False for t in move.targets() if (
         t not in move_pieces
         and board[t] != BoardCellState.EMPTY
     )), True)
+
+def count_marbles_in_line(board, cell, direction):
+    count = 0
+    unit = board[cell]
+    if unit == BoardCellState.EMPTY:
+        return count
+
+    while board[cell] == unit:
+        count += 1
+        cell = Hex.add(cell, direction)
+    return count
 
 class App:
     def __init__(self):
@@ -50,7 +61,7 @@ class App:
         elif self.selection and self.game_board[cell] == BoardCellState.EMPTY:
             if Hex.adjacent(cell, self.selection.head()):
                 self.selection.direction = Hex.subtract(cell, self.selection.head())
-                if is_move_legal(self.game_board, self.selection):
+                if is_move_target_empty(self.game_board, self.selection):
                     apply_move(self.game_board, self.selection)
             self.selection = None
 
@@ -59,6 +70,17 @@ class App:
             self.selection.end = cell
             if not self.selection.pieces():
                 self.selection = None
+
+        elif (self.selection and self.selection.end
+        and Hex.adjacent(cell, self.selection.head())
+        and self.game_board[cell] != self.game_board[self.selection.head()]):
+            self.selection.direction = Hex.subtract(cell, self.selection.head())
+            if self.selection.is_inline():
+                attackers = len(self.selection.pieces())
+                defenders = count_marbles_in_line(self.game_board, cell, self.selection.direction)
+                if attackers > defenders:
+                    apply_move(self.game_board, self.selection)
+            self.selection = None
 
         else:
             self.selection = None

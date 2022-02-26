@@ -18,10 +18,6 @@ def render_marble(canvas, pos, color, selected, focused):
     x, y = pos
     s = MARBLE_SIZE
 
-    if selected:
-        x -= 4
-        y -= 4
-
     # marble body
     canvas.create_oval(
         x - s / 2, y - s / 2,
@@ -58,7 +54,7 @@ def render_marble(canvas, pos, color, selected, focused):
     canvas.create_oval(
         x - s / 2 + s / 16, y - s / 2 + s / 16,
         x - s / 2 + s / 16 + HIGHLIGHT_SHADOW_SIZE, y - s / 2 + s / 16 + HIGHLIGHT_SHADOW_SIZE,
-        fill=darken_color(MARBLE_COLOR),
+        fill=MARBLE_COLOR,
         outline="",
     )
     HIGHLIGHT_BALANCE_SIZE = HIGHLIGHT_SIZE / 3
