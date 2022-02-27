@@ -91,7 +91,7 @@ class App:
     def update(self):
         if self._cpu_countdown:
             self._cpu_countdown -= 1
-        elif self.game.turn == Player.TWO:
+        elif self._config.control_modes[self.game.turn.value] == ControlMode.CPU:
             cpu_move = Agent.request_move(
                 board=self.game_board,
                 player_unit=self.PLAYER_MARBLES[self.game.turn]

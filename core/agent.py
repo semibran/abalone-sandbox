@@ -20,10 +20,22 @@ class Agent:
         if not player_moves:
             return None
 
-        state_space = cls._enumerate_state_space(board, player_unit, depth=2)
+        num_adjacent_enemies = False
+        for cell, cell_state in board.enumerate():
+            if cell_state != player_unit:
+                continue
+            if next((n for n in Hex.neighbors(cell) if board[n] == BoardCellState.next(player_unit)), False):
+                num_adjacent_enemies += 1
+
+        if num_adjacent_enemies >= 3:
+            state_space = cls._enumerate_state_space(board, player_unit, depth=2)
+            for max_node in state_space:
+                max_node.score = min([n.score for n in max_node.children])
+        else:
+            state_space = cls._enumerate_state_space(board, player_unit, depth=1)
+
         best_node = None
         for max_node in state_space:
-            max_node.score = min([n.score for n in max_node.children])
             if best_node is None or max_node.score > best_node.score:
                 best_node = max_node
 
@@ -45,7 +57,7 @@ class Agent:
         )
 
     @classmethod
-    def _enumerate_state_space(cls, board, player_unit, depth=inf):
+    def _enumerate_state_space(cls, board, player_unit, depth=inf, inverse=False):
         state_space = []
         moves = cls._enumerate_player_moves(board, player_unit)
         for move in moves:
@@ -58,12 +70,13 @@ class Agent:
                         board=temp_board,
                         player_unit=BoardCellState.next(player_unit),
                         depth=depth - 1,
+                        inverse=not inverse,
                     )
                 ))
             else:
                 state_space.append(StateSpaceNode(
                     move,
-                    score=cls._heuristic(temp_board, BoardCellState.next(player_unit)) - cls._heuristic(temp_board, player_unit)
+                    score=(cls._heuristic(temp_board, player_unit) - cls._heuristic(temp_board, BoardCellState.next(player_unit))) * (-1 if inverse else 1)
                 ))
         return state_space
 
