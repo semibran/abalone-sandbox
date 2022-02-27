@@ -1,3 +1,4 @@
+from random import random
 from time import time
 from math import pow, inf
 from copy import deepcopy
@@ -22,31 +23,23 @@ class Agent:
         if not player_moves:
             return None
 
-        num_adjacent_enemies = False
-        for cell, cell_state in board.enumerate():
-            if cell_state != player_unit:
-                continue
-            if next((n for n in Hex.neighbors(cell) if board[n] == BoardCellState.next(player_unit)), False):
-                num_adjacent_enemies += 1
-
-        if num_adjacent_enemies >= 3:
-            state_space = cls._enumerate_state_space(board, player_unit, depth=2)
-            for max_node in state_space:
-                max_node.score = min([n.score for n in max_node.children])
+        if cls._should_use_lookaheads(board, player_unit):
+            state_space, _ = cls._enumerate_state_space(board, player_unit, depth=2)
         else:
-            state_space = cls._enumerate_state_space(board, player_unit, depth=1)
+            state_space, _ = cls._enumerate_state_space(board, player_unit, depth=1)
 
         best_node = None
         for max_node in state_space:
             if best_node is None or max_node.score > best_node.score:
                 best_node = max_node
 
-        best_move = best_node.move
-        cls._print_move_deconstruction(board, player_unit, best_move, time=(time() - start_time))
-        return best_move
+        if best_node:
+            best_move = best_node.move
+            cls._print_move_deconstruction(board, player_unit, best_move, best_node.score, time=(time() - start_time))
+            return best_move
 
     @classmethod
-    def _print_move_deconstruction(cls, board, player_unit, move, time):
+    def _print_move_deconstruction(cls, board, player_unit, move, score, time):
         temp_board = deepcopy(board)
         apply_move(temp_board, move)
         print(
@@ -55,32 +48,105 @@ class Agent:
             f"\n- heuristic_score: {cls._heuristic_score(board, player_unit)}"
             f"\n- heuristic_centralization: {cls._heuristic_centralization(board, player_unit)}"
             f"\n- heuristic_adjacency: {cls._heuristic_adjacency(board, player_unit)}"
+            f"\n- final heuristic value: {score:.3f}"
             "\n"
         )
 
     @classmethod
-    def _enumerate_state_space(cls, board, player_unit, depth=inf, inverse=False):
-        state_space = []
-        moves = cls._enumerate_player_moves(board, player_unit)
-        for move in moves:
-            temp_board = deepcopy(board)
-            apply_move(temp_board, move)
-            if depth > 1:
-                state_space.append(StateSpaceNode(
-                    move,
-                    children=cls._enumerate_state_space(
+    def _should_use_lookaheads(cls, board, player_unit):
+        num_adjacent_enemies = 0
+        for cell, cell_state in board.enumerate():
+            if cell_state != player_unit:
+                continue
+            if next((n for n in Hex.neighbors(cell) if board[n] == BoardCellState.next(player_unit)), False):
+                num_adjacent_enemies += 1
+        return num_adjacent_enemies >= 2
+
+    @classmethod
+    def _enumerate_state_space(cls, board, player_unit, depth=inf, alpha=-inf, beta=inf, is_player=True):
+        if depth <= 0:
+            max_score = cls._heuristic(board, player_unit)
+            min_score = cls._heuristic(board, BoardCellState.next(player_unit))
+            return [], max_score - min_score
+
+        moves = cls._enumerate_player_moves(
+            board,
+            player_unit=(player_unit
+                if is_player
+                else BoardCellState.next(player_unit))
+        )
+
+        if is_player:
+            value = -inf
+            state_space = []
+            for move in moves:
+                temp_board = deepcopy(board)
+                apply_move(temp_board, move)
+
+                # children -> all non-pruned moves min can make from this state
+                # value -> best move value for min
+                move_children, move_value = cls._enumerate_state_space(
+                    board=temp_board,
+                    player_unit=player_unit,
+                    depth=depth - 1,
+                    alpha=alpha,
+                    beta=beta,
+                    is_player=False,
+                )
+
+                # use this move if better for max
+                value = max(value, move_value)
+
+                # beta prune - this subtree has a move that is worse for min than the best move found for min (min will never go down this subtree!)
+                if value >= beta:
+                    break
+
+                # use as new best move for max
+                alpha = max(alpha, value)
+
+                # add this move to the state space with its heuristic value
+                state_space.append(StateSpaceNode(move, score=move_value, children=move_children))
+
+            return state_space, value
+
+        else: # find best move for min
+            value = inf
+            state_space = []
+            for move in moves:
+                temp_board = deepcopy(board)
+                apply_move(temp_board, move)
+
+                # children -> all non-pruned moves max can make from this state
+                # value -> value of best move for max
+                if depth == 1: # terminal node
+                    move_children = []
+                    max_score = cls._heuristic(temp_board, player_unit)
+                    min_score = cls._heuristic(temp_board, BoardCellState.next(player_unit))
+                    move_value = max_score - min_score
+                else:
+                    move_children, move_value = cls._enumerate_state_space(
                         board=temp_board,
-                        player_unit=BoardCellState.next(player_unit),
+                        player_unit=player_unit,
                         depth=depth - 1,
-                        inverse=not inverse,
+                        alpha=alpha,
+                        beta=beta,
+                        is_player=True,
                     )
-                ))
-            else:
-                state_space.append(StateSpaceNode(
-                    move,
-                    score=(cls._heuristic(temp_board, player_unit) - cls._heuristic(temp_board, BoardCellState.next(player_unit))) * (-1 if inverse else 1)
-                ))
-        return state_space
+
+                # use this move if better for min
+                value = min(value, move_value)
+
+                # alpha prune - this subtree has a move that is worse for max than the best move found for max (min will always take it!)
+                if value <= alpha:
+                    break
+
+                # use as new best move for min (if max goes down this subtree)
+                beta = min(beta, value)
+
+                # add this move to the state space with its heuristic value
+                state_space.append(StateSpaceNode(move, score=move_value, children=move_children))
+
+            return state_space, value
 
     @classmethod
     def _enumerate_player_moves(cls, board, player_unit):
