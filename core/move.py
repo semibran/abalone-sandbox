@@ -8,7 +8,18 @@ class Move:
     direction: HexDirection = None
 
     def head(self):
-        return self.end or self.start
+        if self.direction is None:
+            return self.end or self.start
+
+        if self.end is None or self.end == self.start:
+            return self.start
+
+        disp = Hex.subtract(self.end, self.start)
+        normal = Hex(disp.x / (abs(disp.x) or 1), disp.y / (abs(disp.y) or 1))
+        if self.direction.value == normal:
+            return self.end
+        else:
+            return self.start
 
     def pieces(self):
         if self.end is None or self.end == self.start:
@@ -26,7 +37,12 @@ class Move:
     def targets(self):
         return [Hex.add(p, self.direction.value) for p in self.pieces()]
 
+    def target_cell(self):
+        return Hex.add(self.head(), self.direction.value)
+
     def is_inline(self):
         if self.end is None or self.end == self.start:
             return False
-        return Hex.subtract(self.pieces()[1], self.start) == self.direction.value
+        normal = Hex.subtract(self.pieces()[1], self.start)
+        return (normal == self.direction.value
+            or normal == self.direction.value.invert())

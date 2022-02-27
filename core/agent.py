@@ -12,11 +12,26 @@ class Agent:
         if not player_moves:
             return None
 
-        return sorted(player_moves, key=lambda move: (
+        best_move = sorted(player_moves, key=lambda move: (
             temp_board := deepcopy(board),
             apply_move(temp_board, move),
             cls._heuristic(temp_board, player_unit)
         )[-1])[-1]
+        cls._print_move_deconstruction(board, player_unit, best_move)
+        return best_move
+
+    @classmethod
+    def _print_move_deconstruction(cls, board, player_unit, move):
+        temp_board = deepcopy(board)
+        apply_move(temp_board, move)
+        print(
+            "-- Heuristic overview"
+            f"\n{move}"
+            f"\n- heuristic_score: {cls._heuristic_score(board, player_unit)}"
+            f"\n- heuristic_centralization: {cls._heuristic_centralization(board, player_unit)}"
+            f"\n- heuristic_adjacency: {cls._heuristic_adjacency(board, player_unit)}"
+            "\n"
+        )
 
     @classmethod
     def _enumerate_player_moves(cls, board, player_unit):
@@ -34,35 +49,44 @@ class Agent:
         cell_moves = []
         selection_shapes = cls._find_selection_shapes(board, cell)
         for shape in selection_shapes:
+            start, end = shape[0], shape[-1]
+            shape = {start, end}
             if shape in known_selection_shapes:
                 continue
             known_selection_shapes.append(shape)
-            shape = list(shape)
-            start, end = shape[0], shape[-1]
             for direction in HexDirection:
-                move = Move(start, end, direction)
+                move = (Move(start, end, direction)
+                    if start != end
+                    else Move(start, direction=direction))
                 if is_move_legal(board, move):
                     cell_moves.append(move)
         return cell_moves
 
     @classmethod
     def _find_selection_shapes(cls, board, origin):
-        selection_shapes = [{origin}]
+        selection_shapes = [[origin]]
         for direction in HexDirection:
             cell = origin
-            shape = set()
-            while len(shape) < 3 and board[cell] == board[origin]:
-                shape.add(cell)
+            shape = [cell]
+            while len(shape) < 3:
+                cell = Hex.add(cell, direction.value)
+                if board[cell] != board[origin]:
+                    break
+                shape.append(cell)
                 if len(shape) > 1:
                     selection_shapes.append(shape.copy())
-                cell = Hex.add(cell, direction.value)
 
         return selection_shapes
 
     @classmethod
     def _heuristic(cls, board, player_unit):
-        return (cls._heuristic_centralization(board, player_unit)
-            + 10 * cls._heuristic_score(board, player_unit))
+        return (100 * cls._heuristic_score(board, player_unit)
+            + cls._heuristic_centralization(board, player_unit)
+            + 0.1 * cls._heuristic_adjacency(board, player_unit))
+
+    @classmethod
+    def _heuristic_score(cls, board, player_unit):
+        return find_board_score(board, player_unit)
 
     @classmethod
     def _heuristic_centralization(cls, board, player_unit):
@@ -75,5 +99,13 @@ class Agent:
         return score
 
     @classmethod
-    def _heuristic_score(cls, board, player_unit):
-        return find_board_score(board, player_unit)
+    def _heuristic_adjacency(cls, board, player_unit):
+        score = 0
+        for cell, cell_state in board.enumerate():
+            if cell_state != player_unit:
+                continue
+            num_allies = 0
+            for neighbor in Hex.neighbors(cell):
+                num_allies += board[neighbor] == cell_state
+            score += pow(num_allies, 2)
+        return score

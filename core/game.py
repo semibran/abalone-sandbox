@@ -12,8 +12,7 @@ def apply_move(board, move):
         board[cell] = BoardCellState.EMPTY
 
     # attempt sumito
-    move_targets = move.targets()
-    defender_cell = move_targets[-1]
+    defender_cell = move.target_cell()
     defender_unit = board[defender_cell]
     if defender_unit not in (BoardCellState.EMPTY, unit):
         num_defenders = count_marbles_in_line(board, defender_cell, move.direction)
@@ -24,6 +23,7 @@ def apply_move(board, move):
                 break
             board[defender_cell] = defender_unit
 
+    move_targets = move.targets()
     for cell in move_targets:
         board[cell] = unit
 
@@ -33,7 +33,7 @@ def is_move_legal(board, move):
     if is_move_target_empty(board, move):
         return True
 
-    target_cell = move.targets()[-1]
+    target_cell = move.target_cell()
     if (target_cell not in board
     or board[move.head()] == board[target_cell]
     or board[move.head()] == BoardCellState.EMPTY):

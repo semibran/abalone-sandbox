@@ -7,7 +7,7 @@ class Hex:
     y: int
 
     def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
+        return self and other and self.x == other.x and self.y == other.y
 
     def astuple(self):
         return (self.x, self.y)
@@ -18,6 +18,9 @@ class Hex:
     def subtract(self, other):
         return Hex(self.x - other.x, self.y - other.y)
 
+    def invert(self):
+        return Hex(-self.x, -self.y)
+
     def manhattan(self, other):
         return (abs(self.x - other.x)
             + abs(self.x + self.y - other.x - other.y)
@@ -25,6 +28,9 @@ class Hex:
 
     def adjacent(self, other):
         return self.manhattan(other) == 1
+
+    def neighbors(self):
+        return [self.add(d.value) for d in HexDirection]
 
 class HexDirection(Enum):
     NW = Hex(0, -1)
