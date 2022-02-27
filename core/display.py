@@ -144,7 +144,7 @@ def render_board(canvas, board, turn=None, player_marbles={}, selection=None, po
 
     board_items = board.enumerate()
     if selection:
-        board_items.sort(key=lambda x: x[0] == selection.head())
+        board_items = sorted(board_items, key=lambda x: x[0] == selection.head())
 
     for cell, cell_state in board_items:
         q, r = cell.astuple()

@@ -11,6 +11,7 @@ def generate_empty_board(size):
 class Board:
     def __init__(self):
         self._data = generate_empty_board(size=5)
+        self._items = None
 
     def offset(self, r):
         return (self.height // 2 - r) * (r <= self.height // 2)
@@ -42,12 +43,14 @@ class Board:
             q, r = cell.astuple()
             q -= self.offset(r)
             self._data[r][q] = data
+            self._items = None
 
     def enumerate(self):
-        items = []
-        for r, line in enumerate(self._data):
-            for q, val in enumerate(line):
-                q += self.offset(r)
-                item = (Hex(q, r), val)
-                items.append(item)
-        return items
+        if not self._items:
+            self._items = []
+            for r, line in enumerate(self._data):
+                for q, val in enumerate(line):
+                    q += self.offset(r)
+                    item = (Hex(q, r), val)
+                    self._items.append(item)
+        return self._items

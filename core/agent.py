@@ -1,3 +1,4 @@
+from time import time
 from math import pow, inf
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -16,6 +17,7 @@ class Agent:
 
     @classmethod
     def request_move(cls, board, player_unit):
+        start_time = time()
         player_moves = cls._enumerate_player_moves(board, player_unit)
         if not player_moves:
             return None
@@ -40,16 +42,16 @@ class Agent:
                 best_node = max_node
 
         best_move = best_node.move
-        cls._print_move_deconstruction(board, player_unit, best_move)
+        cls._print_move_deconstruction(board, player_unit, best_move, time=(time() - start_time))
         return best_move
 
     @classmethod
-    def _print_move_deconstruction(cls, board, player_unit, move):
+    def _print_move_deconstruction(cls, board, player_unit, move, time):
         temp_board = deepcopy(board)
         apply_move(temp_board, move)
         print(
             "-- Heuristic overview"
-            f"\n{move}"
+            f"\nFound {move} in {time:.4f}s"
             f"\n- heuristic_score: {cls._heuristic_score(board, player_unit)}"
             f"\n- heuristic_centralization: {cls._heuristic_centralization(board, player_unit)}"
             f"\n- heuristic_adjacency: {cls._heuristic_adjacency(board, player_unit)}"
@@ -151,8 +153,6 @@ class Agent:
         for cell, cell_state in board.enumerate():
             if cell_state != player_unit:
                 continue
-            num_allies = 0
-            for neighbor in Hex.neighbors(cell):
-                num_allies += board[neighbor] == cell_state
+            num_allies = sum([board[n] == cell_state for n in Hex.neighbors(cell)])
             score += pow(num_allies, 2)
         return score

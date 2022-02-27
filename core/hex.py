@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
+HEX_NEIGHBORS = {}
+
 @dataclass(frozen=True)
 class Hex:
     x: int
@@ -30,7 +32,10 @@ class Hex:
         return self.manhattan(other) == 1
 
     def neighbors(self):
-        return [self.add(d.value) for d in HexDirection]
+        self_tuple = self.astuple()
+        if self_tuple not in HEX_NEIGHBORS:
+            HEX_NEIGHBORS[self_tuple] = [self.add(d.value) for d in HexDirection]
+        return HEX_NEIGHBORS[self_tuple]
 
 class HexDirection(Enum):
     NW = Hex(0, -1)
