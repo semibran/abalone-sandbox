@@ -50,14 +50,18 @@ class App:
         elif (self.selection and self.selection.end is None
         and self.game_board[cell] == self.game_board[self.selection.head()]):
             self.selection.end = cell
-            if not self.selection.pieces():
+            selection_pieces = self.selection.pieces()
+            if (not selection_pieces
+            or next((c for c in selection_pieces if self.game_board[c] == BoardCellState.EMPTY), None)):
                 self.selection = None
 
         elif (self.selection and self.selection.end
         and self.game_board[cell] == self.game_board[self.selection.head()]):
             self.selection.start = self.selection.end
             self.selection.end = cell
-            if not self.selection.pieces():
+            selection_pieces = self.selection.pieces()
+            if (not selection_pieces
+            or next((c for c in selection_pieces if self.game_board[c] == BoardCellState.EMPTY), None)):
                 self.selection = None
 
         elif (self.selection and self.selection.end
