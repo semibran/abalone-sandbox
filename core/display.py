@@ -2,6 +2,7 @@ from time import sleep
 from math import sqrt
 from helpers.point_to_hex import point_to_hex
 from tkinter import Tk, Canvas
+from core.game import Player, find_board_score
 from core.board_cell_state import BoardCellState
 from core.hex import Hex
 from config import (
@@ -9,15 +10,10 @@ from config import (
     BOARD_SIZE, BOARD_MAXCOLS,
     BOARD_CELL_SIZE,
     BOARD_WIDTH, BOARD_HEIGHT,
-    MARBLE_SIZE,
+    MARBLE_SIZE, MARBLE_COLORS,
 )
 import colors.palette as palette
 from colors.transform import darken_color, lighten_color
-
-MARBLE_COLORS = {
-    BoardCellState.WHITE: palette.COLOR_BLUE,
-    BoardCellState.BLACK: palette.COLOR_RED,
-}
 
 def render_marble(canvas, pos, color, size=MARBLE_SIZE, selected=False, focused=False):
     MARBLE_COLOR = darken_color(color) if selected else color
@@ -114,6 +110,18 @@ def render_marble(canvas, pos, color, size=MARBLE_SIZE, selected=False, focused=
         outline="",
     )
 
+def render_score(canvas, pos, score, color):
+    x, y = pos
+    MARBLE_SIZE = BOARD_CELL_SIZE / 4
+    MARBLE_MARGIN = MARBLE_SIZE / 4
+    for i in range(score):
+        render_marble(
+            canvas,
+            pos=(x + i * (MARBLE_SIZE + MARBLE_MARGIN), y),
+            color=color,
+            size=MARBLE_SIZE
+        )
+
 def render_board_cell(canvas, pos, cell, cell_state, selection):
     is_cell_selected = selection and selection.pieces() and cell in selection.pieces()
     is_cell_focused = selection and cell == selection.head()
@@ -137,10 +145,26 @@ def render_board(canvas, board, turn=None, player_marbles={}, selection=None, po
     if turn and player_marbles:
         render_marble(
             canvas,
-            pos=(BOARD_CELL_SIZE / 4, BOARD_CELL_SIZE / 4),
+            pos=(BOARD_WIDTH - BOARD_CELL_SIZE / 4, BOARD_CELL_SIZE / 4),
             color=MARBLE_COLORS[player_marbles[turn]],
             size=BOARD_CELL_SIZE / 4,
         )
+
+    # P2 score
+    render_score(
+        canvas,
+        pos=(BOARD_CELL_SIZE / 4, BOARD_HEIGHT - BOARD_CELL_SIZE / 4),
+        score=find_board_score(board, player_marbles[Player.ONE]),
+        color=MARBLE_COLORS[player_marbles[Player.TWO]]
+    )
+
+    # P2 score
+    render_score(
+        canvas,
+        pos=(BOARD_CELL_SIZE / 4, BOARD_CELL_SIZE / 4),
+        score=find_board_score(board, player_marbles[Player.TWO]),
+        color=MARBLE_COLORS[player_marbles[Player.ONE]]
+    )
 
     board_items = board.enumerate()
     if selection:

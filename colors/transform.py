@@ -1,12 +1,16 @@
 import colors.palette as palette
 
 COLORMAP_DARKEN = {
-    palette.COLOR_BLUE: palette.COLOR_DARKBLUE,
     palette.COLOR_LIGHTBLUE: palette.COLOR_BLUE,
+    palette.COLOR_BLUE: palette.COLOR_DARKBLUE,
     palette.COLOR_DARKBLUE: palette.COLOR_BLACK,
-    palette.COLOR_RED: palette.COLOR_DARKRED,
     palette.COLOR_LIGHTRED: palette.COLOR_RED,
+    palette.COLOR_RED: palette.COLOR_DARKRED,
     palette.COLOR_DARKRED: palette.COLOR_BLACK,
+    palette.COLOR_SILVER: palette.COLOR_GRAY,
+    palette.COLOR_GRAY: palette.COLOR_DARKGRAY,
+    palette.COLOR_DARKGRAY: palette.COLOR_CHARCOAL,
+    palette.COLOR_CHARCOAL: palette.COLOR_BLACK,
 }
 
 COLORMAP_LIGHTEN = {
@@ -14,6 +18,11 @@ COLORMAP_LIGHTEN = {
     palette.COLOR_DARKBLUE: palette.COLOR_BLUE,
     palette.COLOR_RED: palette.COLOR_LIGHTRED,
     palette.COLOR_DARKRED: palette.COLOR_RED,
+    palette.COLOR_SILVER: palette.COLOR_WHITE,
+    palette.COLOR_GRAY: palette.COLOR_SILVER,
+    palette.COLOR_DARKGRAY: palette.COLOR_GRAY,
+    palette.COLOR_CHARCOAL: palette.COLOR_DARKGRAY,
+    palette.COLOR_BLACK: palette.COLOR_CHARCOAL,
 }
 
 def darken_color(color):
