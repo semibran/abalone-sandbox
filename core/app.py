@@ -54,7 +54,7 @@ class App:
             self.selection.end = cell
             selection_pieces = self.selection.pieces()
             if (not selection_pieces
-            or next((c for c in selection_pieces if self.game_board[c] == BoardCellState.EMPTY), None)):
+            or next((c for c in selection_pieces if self.game_board[c] != self.game_board[self.selection.head()]), None)):
                 self.selection = None
 
         elif (self.selection and self.selection.end
@@ -63,7 +63,7 @@ class App:
             self.selection.end = cell
             selection_pieces = self.selection.pieces()
             if (not selection_pieces
-            or next((c for c in selection_pieces if self.game_board[c] == BoardCellState.EMPTY), None)):
+            or next((c for c in selection_pieces if self.game_board[c] != self.game_board[self.selection.head()]), None)):
                 self.selection = None
 
         elif (self.selection and self.selection.end

@@ -1,3 +1,4 @@
+from math import inf
 from enum import Enum
 from core.board_cell_state import BoardCellState
 from core.hex import Hex
@@ -58,6 +59,10 @@ def count_marbles_in_line(board, cell, direction):
     while board[cell] == unit:
         count += 1
         cell = Hex.add(cell, direction.value)
+
+    if board[cell] not in (None, BoardCellState.EMPTY):
+        return inf
+
     return count
 
 class Player(Enum):
