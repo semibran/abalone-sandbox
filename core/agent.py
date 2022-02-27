@@ -1,14 +1,21 @@
-from random import choice
+from copy import deepcopy
+from random import random
 from core.hex import Hex, HexDirection
 from core.move import Move
-from core.game import is_move_legal
+from core.game import apply_move, is_move_legal
 
 class Agent:
 
     @classmethod
     def request_move(cls, board, player_unit):
         player_moves = cls._enumerate_player_moves(board, player_unit)
-        return choice(player_moves) if player_moves else None
+        if not player_moves:
+            return None
+        return sorted(player_moves, key=lambda move: (
+            temp_board := deepcopy(board),
+            apply_move(temp_board, move),
+            cls._heuristic(temp_board, player_unit)
+        )[-1])[0]
 
     @classmethod
     def _enumerate_player_moves(cls, board, player_unit):
@@ -50,3 +57,7 @@ class Agent:
                 cell = Hex.add(cell, direction.value)
 
         return selection_shapes
+
+    @classmethod
+    def _heuristic(cls, board, player_unit):
+        return random()
