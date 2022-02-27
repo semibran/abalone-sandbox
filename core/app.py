@@ -1,3 +1,4 @@
+from time import sleep
 from core.app_config import AppConfig
 from core.board_cell_state import BoardCellState
 from core.game import Game, Player, is_move_target_empty, count_marbles_in_line
@@ -76,10 +77,6 @@ class App:
 
         self._display.render(self)
 
-    def _apply_selection(self):
-        self.game.perform_move(self.selection)
-        self.selection = None
-
         if self.game.turn == Player.TWO:
             cpu_move = Agent.request_move(
                 board=self.game_board,
@@ -87,6 +84,11 @@ class App:
             )
             if cpu_move:
                 self.game.perform_move(cpu_move)
+                self._display.render(self)
+
+    def _apply_selection(self):
+        self.game.perform_move(self.selection)
+        self.selection = None
 
     def start(self):
         self._new_game()

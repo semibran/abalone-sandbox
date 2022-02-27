@@ -18,13 +18,13 @@ class Hex:
     def subtract(self, other):
         return Hex(self.x - other.x, self.y - other.y)
 
-    def distance(self, other):
+    def manhattan(self, other):
         return (abs(self.x - other.x)
             + abs(self.x + self.y - other.x - other.y)
             + abs(self.y - other.y)) / 2
 
     def adjacent(self, other):
-        return self.distance(other) == 1
+        return self.manhattan(other) == 1
 
 class HexDirection(Enum):
     NW = Hex(0, -1)

@@ -11,6 +11,7 @@ class Agent:
         player_moves = cls._enumerate_player_moves(board, player_unit)
         if not player_moves:
             return None
+
         return sorted(player_moves, key=lambda move: (
             temp_board := deepcopy(board),
             apply_move(temp_board, move),
@@ -60,4 +61,14 @@ class Agent:
 
     @classmethod
     def _heuristic(cls, board, player_unit):
-        return random()
+        return cls._heuristic_centralization(board, player_unit)
+
+    @classmethod
+    def _heuristic_centralization(cls, board, player_unit):
+        score = 0
+        for cell, cell_state in board.enumerate():
+            if cell_state != player_unit:
+                continue
+            board_center = Hex(board.height // 2, board.height // 2)
+            score += Hex.manhattan(cell, board_center)
+        return score
