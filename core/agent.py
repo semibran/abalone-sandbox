@@ -118,20 +118,14 @@ class Agent:
 
                 # children -> all non-pruned moves max can make from this state
                 # value -> value of best move for max
-                if depth == 1: # terminal node
-                    move_children = []
-                    max_score = cls._heuristic(temp_board, player_unit)
-                    min_score = cls._heuristic(temp_board, BoardCellState.next(player_unit))
-                    move_value = max_score - min_score
-                else:
-                    move_children, move_value = cls._enumerate_state_space(
-                        board=temp_board,
-                        player_unit=player_unit,
-                        depth=depth - 1,
-                        alpha=alpha,
-                        beta=beta,
-                        is_player=True,
-                    )
+                move_children, move_value = cls._enumerate_state_space(
+                    board=temp_board,
+                    player_unit=player_unit,
+                    depth=depth - 1,
+                    alpha=alpha,
+                    beta=beta,
+                    is_player=True,
+                )
 
                 # use this move if better for min
                 value = min(value, move_value)
