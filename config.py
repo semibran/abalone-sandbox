@@ -1,4 +1,5 @@
 APP_NAME = "Abalone"
+FPS = 60
 
 BOARD_SIZE = 5
 BOARD_MAXCOLS = BOARD_SIZE * 2 - 1

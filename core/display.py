@@ -1,9 +1,11 @@
+from time import sleep
 from math import sqrt
 from helpers.point_to_hex import point_to_hex
 from tkinter import Tk, Canvas
 from core.board_cell_state import BoardCellState
 from core.hex import Hex
 from config import (
+    FPS,
     BOARD_SIZE, BOARD_MAXCOLS,
     BOARD_CELL_SIZE,
     BOARD_WIDTH, BOARD_HEIGHT,
@@ -160,6 +162,7 @@ class Display:
         self._title = title
         self._window = None
         self._canvas = None
+        self._done = False
 
     def open(self, app, actions):
         self._window = Tk()
@@ -175,8 +178,11 @@ class Display:
             actions["select_cell"](Hex(*point_to_hex((x, y), rh)))
         ))
 
-        self.render(app)
-        self._window.mainloop()
+        while not self._done:
+            app.update()
+            self.render(app)
+            self._window.update()
+            sleep(1 / FPS)
 
     def render(self, app):
         render_board(

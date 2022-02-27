@@ -7,13 +7,13 @@ class BoardLayout(Enum):
     BELGIAN_DAISY = auto()
 
 class ControlMode(Enum):
-    Human = auto()
-    Cpu = auto()
+    HUMAN = auto()
+    CPU = auto()
 
 @dataclass
 class AppConfig:
     starting_layout: BoardLayout = BoardLayout.STANDARD
     colours_inverted: bool = False
-    control_modes: tuple[ControlMode, ControlMode] = (ControlMode.Human, ControlMode.Cpu)
+    control_modes: tuple[ControlMode, ControlMode] = (ControlMode.HUMAN, ControlMode.CPU)
     move_limits: tuple[int, int] = (50, 50)
     time_limits: tuple[int, int] = (5, 5)

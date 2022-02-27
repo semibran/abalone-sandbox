@@ -1,5 +1,4 @@
-from time import sleep
-from core.app_config import AppConfig
+from core.app_config import AppConfig, ControlMode
 from core.board_cell_state import BoardCellState
 from core.game import Game, Player, is_move_target_empty, count_marbles_in_line
 from core.move import Move
@@ -25,6 +24,7 @@ class App:
         self.selection = None
         self._config = AppConfig()
         self._display = Display(title=APP_NAME)
+        self._cpu_countdown = 0
 
     @property
     def game_board(self):
@@ -36,7 +36,9 @@ class App:
     def _select_cell(self, cell):
         cell = offset_true_hex(self.game_board, cell)
 
-        if not self.selection and self.game_board[cell] == App.PLAYER_MARBLES[self.game.turn]:
+        if (not self.selection
+        and self.game_board[cell] == App.PLAYER_MARBLES[self.game.turn]
+        and self._config.control_modes[self.game.turn.value] != ControlMode.CPU):
             self.selection = Move(cell)
 
         elif self.selection and self.game_board[cell] == BoardCellState.EMPTY:
@@ -79,20 +81,21 @@ class App:
         else:
             self.selection = None
 
-        self._display.render(self)
+    def _apply_selection(self):
+        self.game.perform_move(self.selection)
+        self.selection = None
+        self._cpu_countdown = 15
 
-        if self.game.turn == Player.TWO:
+    def update(self):
+        if self._cpu_countdown:
+            self._cpu_countdown -= 1
+        elif self.game.turn == Player.TWO:
             cpu_move = Agent.request_move(
                 board=self.game_board,
                 player_unit=self.PLAYER_MARBLES[self.game.turn]
             )
             if cpu_move:
                 self.game.perform_move(cpu_move)
-                self._display.render(self)
-
-    def _apply_selection(self):
-        self.game.perform_move(self.selection)
-        self.selection = None
 
     def start(self):
         self._new_game()
