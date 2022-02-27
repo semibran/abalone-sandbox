@@ -1,8 +1,8 @@
 from math import inf
 from enum import Enum
 from core.board_cell_state import BoardCellState
+from core.board_layout import BoardLayout
 from core.hex import Hex
-from helpers.setup_board import setup_board
 
 def apply_move(board, move):
     num_ejected = 0
@@ -66,13 +66,13 @@ def count_marbles_in_line(board, cell, direction):
     return count
 
 def find_board_score(board, player_unit):
-    score = 0
+    enemy_unit = BoardCellState.next(player_unit)
+    max_enemy_marbles = BoardLayout.num_units(board.layout, enemy_unit)
+    num_enemy_marbles = 0
     for _, cell_state in board.enumerate():
-        if cell_state == player_unit:
-            score += 1
-        elif cell_state != BoardCellState.EMPTY:
-            score -= 1
-    return score
+        if cell_state == enemy_unit:
+            num_enemy_marbles += 1
+    return max_enemy_marbles - num_enemy_marbles
 
 class Player(Enum):
     ONE = 0
@@ -83,7 +83,7 @@ class Player(Enum):
 
 class Game:
     def __init__(self, layout):
-        self.board = setup_board(layout)
+        self.board = BoardLayout.setup_board(layout)
         self.turn = Player.ONE
 
     def perform_move(self, move):

@@ -1,10 +1,6 @@
-from dataclasses import dataclass
 from enum import Enum, auto
-
-class BoardLayout(Enum):
-    STANDARD = "layouts/standard.json"
-    GERMAN_DAISY = auto()
-    BELGIAN_DAISY = auto()
+from dataclasses import dataclass
+from core.board_layout import BoardLayout
 
 class ControlMode(Enum):
     HUMAN = auto()

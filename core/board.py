@@ -9,9 +9,14 @@ def generate_empty_board(size):
   return board
 
 class Board:
-    def __init__(self):
+    def __init__(self, layout=None):
+        self._layout = layout
         self._data = generate_empty_board(size=5)
         self._items = None
+
+    @property
+    def layout(self):
+        return self._layout
 
     def offset(self, r):
         return (self.height // 2 - r) * (r <= self.height // 2)
