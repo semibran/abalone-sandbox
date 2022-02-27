@@ -1,11 +1,22 @@
 from dataclasses import dataclass
 from core.hex import Hex, HexDirection
+from config import BOARD_MAXCOLS
+
+def format_cell(cell):
+    return f"{chr(cell.x + 65)}{BOARD_MAXCOLS - cell.y}"
 
 @dataclass
 class Move:
     start: Hex
     end: Hex = None
     direction: HexDirection = None
+
+    def __str__(self):
+        return "(" + ", ".join([
+            self.direction.name,
+            format_cell(self.start),
+            *([format_cell(self.end)] if self.end else [])
+        ]) + ")"
 
     def head(self):
         if self.direction is None:
