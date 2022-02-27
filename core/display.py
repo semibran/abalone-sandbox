@@ -122,7 +122,7 @@ def render_score(canvas, pos, score, color):
             size=MARBLE_SIZE
         )
 
-def render_board_cell(canvas, pos, cell, cell_state, selection):
+def render_board_cell(canvas, pos, cell, cell_state, turn, game_over, selection, player_marbles):
     is_cell_selected = selection and selection.pieces() and cell in selection.pieces()
     is_cell_focused = selection and cell == selection.head()
 
@@ -135,22 +135,44 @@ def render_board_cell(canvas, pos, cell, cell_state, selection):
         outline="",
     )
 
-    if cell_state != BoardCellState.EMPTY:
-        marble_color = MARBLE_COLORS[cell_state]
-        render_marble(canvas, pos, color=marble_color, selected=is_cell_selected, focused=is_cell_focused)
+    if cell_state == BoardCellState.EMPTY:
+        return
 
-def render_board(canvas, board, turn=None, player_marbles={}, selection=None, pos=(0, 0)):
+    marble_color = (palette.COLOR_GRAY
+        if game_over and cell_state == player_marbles[turn]
+        else MARBLE_COLORS[cell_state])
+    render_marble(canvas, pos, color=marble_color, selected=is_cell_selected, focused=is_cell_focused)
+
+def render_board(canvas, board, turn, game_over=False, selection=None, player_marbles={}, pos=(0, 0)):
+    board_items = board.enumerate()
+    if selection:
+        board_items = sorted(board_items, key=lambda x: x[0] == selection.head())
+
+    for cell, cell_state in board_items:
+        q, r = cell.astuple()
+        q -= board.offset(r)
+        x = (q * BOARD_CELL_SIZE
+            + (BOARD_MAXCOLS - board.width(r) + 1) * BOARD_CELL_SIZE / 2
+            + pos[0])
+        y = (r * (BOARD_CELL_SIZE * 7 / 8)
+            + BOARD_CELL_SIZE / 2
+            + pos[1])
+        render_board_cell(canvas, (x, y), cell, cell_state, turn, game_over, selection, player_marbles)
+
+def render_game(canvas, board, turn=None, game_over=False, selection=None, player_marbles={}, pos=(0, 0)):
     canvas.delete("all") # TODO: smart redrawing
 
     if turn and player_marbles:
         render_marble(
             canvas,
             pos=(BOARD_WIDTH - BOARD_CELL_SIZE / 4, BOARD_CELL_SIZE / 4),
-            color=MARBLE_COLORS[player_marbles[turn]],
+            color=(MARBLE_COLORS[player_marbles[turn]]
+                if not game_over
+                else palette.COLOR_GRAY),
             size=BOARD_CELL_SIZE / 4,
         )
 
-    # P2 score
+    # P1 score
     render_score(
         canvas,
         pos=(BOARD_CELL_SIZE / 4, BOARD_HEIGHT - BOARD_CELL_SIZE / 4),
@@ -166,20 +188,7 @@ def render_board(canvas, board, turn=None, player_marbles={}, selection=None, po
         color=MARBLE_COLORS[player_marbles[Player.ONE]]
     )
 
-    board_items = board.enumerate()
-    if selection:
-        board_items = sorted(board_items, key=lambda x: x[0] == selection.head())
-
-    for cell, cell_state in board_items:
-        q, r = cell.astuple()
-        q -= board.offset(r)
-        x = (q * BOARD_CELL_SIZE
-            + (BOARD_MAXCOLS - board.width(r) + 1) * BOARD_CELL_SIZE / 2
-            + pos[0])
-        y = (r * (BOARD_CELL_SIZE * 7 / 8)
-            + BOARD_CELL_SIZE / 2
-            + pos[1])
-        render_board_cell(canvas, (x, y), cell, cell_state, selection)
+    render_board(canvas, board, turn, game_over, selection, player_marbles, pos)
 
 class Display:
     def __init__(self, title):
@@ -209,10 +218,11 @@ class Display:
             sleep(1 / FPS)
 
     def render(self, app):
-        render_board(
+        render_game(
             canvas=self._canvas,
             board=app.game_board,
-            turn=app.game.turn,
+            turn=app.game_turn,
+            game_over=app.game_over,
             player_marbles=app.PLAYER_MARBLES,
             selection=app.selection,
         )

@@ -3,6 +3,7 @@ from enum import Enum
 from core.board_cell_state import BoardCellState
 from core.board_layout import BoardLayout
 from core.hex import Hex
+from config import NUM_EJECTED_MARBLES_TO_WIN
 
 def apply_move(board, move):
     num_ejected = 0
@@ -85,7 +86,21 @@ class Game:
     def __init__(self, layout):
         self.board = BoardLayout.setup_board(layout)
         self.turn = Player.ONE
+        self._over = False
+
+    @property
+    def over(self):
+        return self._over
 
     def perform_move(self, move):
+        if self._over:
+            return False
+
+        player_unit = self.board[move.head()]
         apply_move(self.board, move)
+        score = find_board_score(self.board, player_unit)
+        if score >= NUM_EJECTED_MARBLES_TO_WIN:
+            self._over = True
+
         self.turn = Player.next(self.turn)
+        return True

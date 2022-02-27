@@ -32,10 +32,21 @@ class App:
     def game_board(self):
         return self.game.board
 
+    @property
+    def game_turn(self):
+        return self.game.turn
+
+    @property
+    def game_over(self):
+        return self.game.over
+
     def _new_game(self):
         self.game = Game(layout=self._config.starting_layout)
 
     def _select_cell(self, cell):
+        if self.game_over:
+            self._new_game()
+
         cell = offset_true_hex(self.game_board, cell)
 
         if (not self.selection
