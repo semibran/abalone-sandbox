@@ -1,8 +1,16 @@
+from math import pow, inf
 from copy import deepcopy
-from math import pow
+from dataclasses import dataclass, field
 from core.hex import Hex, HexDirection
 from core.move import Move
+from core.board_cell_state import BoardCellState
 from core.game import apply_move, is_move_legal, find_board_score
+
+@dataclass
+class StateSpaceNode:
+    move: Move
+    score: float = None
+    children: list = field(default_factory=list)
 
 class Agent:
 
@@ -12,11 +20,14 @@ class Agent:
         if not player_moves:
             return None
 
-        best_move = sorted(player_moves, key=lambda move: (
-            temp_board := deepcopy(board),
-            apply_move(temp_board, move),
-            cls._heuristic(temp_board, player_unit)
-        )[-1])[-1]
+        state_space = cls._enumerate_state_space(board, player_unit, depth=2)
+        best_node = None
+        for max_node in state_space:
+            max_node.score = min([n.score for n in max_node.children])
+            if best_node is None or max_node.score > best_node.score:
+                best_node = max_node
+
+        best_move = best_node.move
         cls._print_move_deconstruction(board, player_unit, best_move)
         return best_move
 
@@ -32,6 +43,29 @@ class Agent:
             f"\n- heuristic_adjacency: {cls._heuristic_adjacency(board, player_unit)}"
             "\n"
         )
+
+    @classmethod
+    def _enumerate_state_space(cls, board, player_unit, depth=inf):
+        state_space = []
+        moves = cls._enumerate_player_moves(board, player_unit)
+        for move in moves:
+            temp_board = deepcopy(board)
+            apply_move(temp_board, move)
+            if depth > 1:
+                state_space.append(StateSpaceNode(
+                    move,
+                    children=cls._enumerate_state_space(
+                        board=temp_board,
+                        player_unit=BoardCellState.next(player_unit),
+                        depth=depth - 1,
+                    )
+                ))
+            else:
+                state_space.append(StateSpaceNode(
+                    move,
+                    score=cls._heuristic(temp_board, BoardCellState.next(player_unit)) - cls._heuristic(temp_board, player_unit)
+                ))
+        return state_space
 
     @classmethod
     def _enumerate_player_moves(cls, board, player_unit):

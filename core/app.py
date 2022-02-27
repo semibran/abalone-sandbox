@@ -7,6 +7,8 @@ from core.hex import Hex, HexDirection
 from core.agent import Agent
 from config import APP_NAME
 
+CPU_DELAY = 1
+
 def offset_true_hex(board, cell):
     q, r = cell.astuple()
     q += board.height // 2
@@ -84,7 +86,7 @@ class App:
     def _apply_selection(self):
         self.game.perform_move(self.selection)
         self.selection = None
-        self._cpu_countdown = 15
+        self._cpu_countdown = CPU_DELAY
 
     def update(self):
         if self._cpu_countdown:
