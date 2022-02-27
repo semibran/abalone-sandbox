@@ -65,6 +65,15 @@ def count_marbles_in_line(board, cell, direction):
 
     return count
 
+def find_board_score(board, player_unit):
+    score = 0
+    for _, cell_state in board.enumerate():
+        if cell_state == player_unit:
+            score += 1
+        elif cell_state != BoardCellState.EMPTY:
+            score -= 1
+    return score
+
 class Player(Enum):
     ONE = 0
     TWO = 1

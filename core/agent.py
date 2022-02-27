@@ -1,8 +1,8 @@
 from copy import deepcopy
-from random import random
+from math import pow
 from core.hex import Hex, HexDirection
 from core.move import Move
-from core.game import apply_move, is_move_legal
+from core.game import apply_move, is_move_legal, find_board_score
 
 class Agent:
 
@@ -16,7 +16,7 @@ class Agent:
             temp_board := deepcopy(board),
             apply_move(temp_board, move),
             cls._heuristic(temp_board, player_unit)
-        )[-1])[0]
+        )[-1])[-1]
 
     @classmethod
     def _enumerate_player_moves(cls, board, player_unit):
@@ -61,7 +61,8 @@ class Agent:
 
     @classmethod
     def _heuristic(cls, board, player_unit):
-        return cls._heuristic_centralization(board, player_unit)
+        return (cls._heuristic_centralization(board, player_unit)
+            + 10 * cls._heuristic_score(board, player_unit))
 
     @classmethod
     def _heuristic_centralization(cls, board, player_unit):
@@ -70,5 +71,9 @@ class Agent:
             if cell_state != player_unit:
                 continue
             board_center = Hex(board.height // 2, board.height // 2)
-            score += Hex.manhattan(cell, board_center)
+            score += pow(board.height // 2 - Hex.manhattan(cell, board_center), 2)
         return score
+
+    @classmethod
+    def _heuristic_score(cls, board, player_unit):
+        return find_board_score(board, player_unit)
