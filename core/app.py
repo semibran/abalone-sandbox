@@ -41,12 +41,19 @@ class App:
     def game_over(self):
         return self.game.over
 
+    @property
+    def game_winner(self):
+        return self.game.winner
+
     def _new_game(self):
         self.game = Game(layout=self._config.starting_layout)
+        self._display.clear()
+        self._display.render(self)
 
     def _select_cell(self, cell):
         if self.game_over:
             self._new_game()
+            return
 
         cell = offset_true_hex(self.game_board, cell)
 
@@ -102,11 +109,11 @@ class App:
         self.selection = None
 
     def _perform_move(self, move):
-        self._display.perform_move(move, self.game_board)
+        self._display.perform_move(move, self.game_board, on_end=lambda: self._display.update_hud(self))
         self.game.perform_move(move)
 
     def update(self):
-        if self._display.anims:
+        if self._display.is_animating:
             return
 
         if self._config.control_modes[self.game.turn.value] == ControlMode.CPU:
@@ -118,9 +125,8 @@ class App:
                 self._perform_move(cpu_move)
 
     def start(self):
-        self._new_game()
         self._display.open(on_click=lambda cell: self._select_cell(cell))
-        self._display.render(self)
+        self._new_game()
 
         start_time = None
         while not self._done:
@@ -128,6 +134,6 @@ class App:
             start_time = time()
             self.update()
             self._display.update()
-            if self._display.anims:
+            if self._display.is_animating:
                 self._display.render(self)
             sleep(1 / FPS)

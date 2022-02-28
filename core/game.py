@@ -90,21 +90,21 @@ class Game:
     def __init__(self, layout):
         self.board = BoardLayout.setup_board(layout)
         self.turn = Player.ONE
-        self._over = False
+        self.winner = None
 
     @property
     def over(self):
-        return self._over
+        return bool(self.winner)
 
     def perform_move(self, move):
-        if self._over:
+        if self.over:
             return False
 
         player_unit = self.board[move.head()]
         apply_move(self.board, move)
         score = find_board_score(self.board, player_unit)
         if score >= NUM_EJECTED_MARBLES_TO_WIN:
-            self._over = True
+            self.winner = self.turn
 
         self.turn = Player.next(self.turn)
         return True

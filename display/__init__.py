@@ -9,6 +9,7 @@ from core.hex import Hex
 from display.anims.tween import TweenAnim
 from display.anims.hex_tween import HexTweenAnim
 from display.marble import render_marble
+from display.score import render_score
 from helpers.easing_expo import ease_out, ease_in
 import colors.palette as palette
 from config import (
@@ -17,18 +18,6 @@ from config import (
     BOARD_WIDTH, BOARD_HEIGHT,
     MARBLE_SIZE, MARBLE_COLORS,
 )
-
-def render_score(canvas, pos, score, color):
-    x, y = pos
-    MARBLE_SIZE = BOARD_CELL_SIZE / 4
-    MARBLE_MARGIN = MARBLE_SIZE / 4
-    for i in range(score):
-        render_marble(
-            canvas,
-            pos=(x + i * (MARBLE_SIZE + MARBLE_MARGIN), y),
-            color=color,
-            size=MARBLE_SIZE
-        )
 
 class MarbleMoveAnim(HexTweenAnim):
     duration = 10
@@ -44,6 +33,7 @@ class Marble:
     object_ids: list = field(default_factory=list)
     selected: bool = False
     focused: bool = False
+    faded: bool = False
 
 class Display:
 
@@ -53,10 +43,12 @@ class Display:
         self._canvas = None
         self._marbles = []
         self._anims = []
+        self._ids_turn_indicator = []
+        self._ids_scores = []
 
     @property
-    def anims(self):
-        return self._anims
+    def is_animating(self):
+        return next((a for a in self._anims if not a.done), None)
 
     def open(self, on_click):
         self._window = Tk()
@@ -72,6 +64,43 @@ class Display:
             on_click(Hex(*point_to_hex((x, y), rh)))
         ))
 
+    def clear(self):
+        self._delete_marbles()
+        self._clear_hud()
+
+    def update(self):
+        self._update_anims()
+        self._window.update()
+
+    def update_hud(self, app):
+        self._update_turn_indicator(app)
+        self._update_scores(app)
+
+    def _clear_hud(self):
+        self._clear_turn_indicator()
+        self._clear_scores()
+
+    def _update_turn_indicator(self, app):
+        self._clear_turn_indicator()
+        self._render_turn_indicator(
+            player_unit=app.PLAYER_MARBLES[app.game_turn],
+            game_over=app.game_over,
+        )
+
+    def _clear_turn_indicator(self):
+        for object_id in self._ids_turn_indicator:
+            self._canvas.delete(object_id)
+        self._ids_turn_indicator.clear()
+
+    def _update_scores(self, app):
+        self._clear_scores()
+        self._render_scores(app)
+
+    def _clear_scores(self):
+        for object_id in self._ids_scores:
+            self._canvas.delete(object_id)
+        self._ids_scores.clear()
+
     def _update_anims(self):
         self._anims = [(a.update(), a)[-1] for a in self._anims if not a.done]
 
@@ -79,11 +108,14 @@ class Display:
         for marble in self._marbles:
             is_marble_selected = bool(app.selection and marble.cell in app.selection.pieces())
             is_marble_focused = bool(app.selection and marble.cell == app.selection.head())
+            is_marble_faded = app.game_over and marble.kind != app.PLAYER_MARBLES[app.game_winner]
             if (marble.selected != is_marble_selected
-            or marble.focused != is_marble_focused):
+            or marble.focused != is_marble_focused
+            or marble.faded != is_marble_faded):
                 self._clear_marble(marble)
                 marble.selected = is_marble_selected
                 marble.focused = is_marble_focused
+                marble.faded = is_marble_faded
                 marble.object_ids = self._render_marble(app, marble.pos, marble.cell, marble.kind)
 
             marble_anims = [a for a in self._anims if a.target is marble]
@@ -126,9 +158,10 @@ class Display:
         self._clear_marble(marble)
         self._marbles.remove(marble)
 
-    def update(self):
-        self._update_anims()
-        self._window.update()
+    def _delete_marbles(self):
+        for marble in self._marbles:
+            self._clear_marble(marble)
+        self._marbles.clear()
 
     def render(self, app):
         if self._marbles:
@@ -136,20 +169,19 @@ class Display:
         else:
             self._render_game(app)
 
-    def _render_game(self, app):
-        player_marble = app.PLAYER_MARBLES[app.game_turn]
-        if player_marble:
-            render_marble(
-                canvas=self._canvas,
-                pos=(BOARD_WIDTH - BOARD_CELL_SIZE / 4, BOARD_CELL_SIZE / 4),
-                color=(palette.COLOR_GRAY
-                    if app.game_over
-                    else MARBLE_COLORS[player_marble]),
-                size=BOARD_CELL_SIZE / 4,
-            )
+    def _render_turn_indicator(self, player_unit, game_over=False):
+        self._ids_turn_indicator += render_marble(
+            canvas=self._canvas,
+            pos=(BOARD_WIDTH - BOARD_CELL_SIZE / 4, BOARD_CELL_SIZE / 4),
+            color=(palette.COLOR_GRAY
+                if game_over
+                else MARBLE_COLORS[player_unit]),
+            size=BOARD_CELL_SIZE / 4,
+        )
 
+    def _render_scores(self, app):
         # P1 score
-        render_score(
+        self._ids_scores += render_score(
             canvas=self._canvas,
             pos=(BOARD_CELL_SIZE / 4, BOARD_HEIGHT - BOARD_CELL_SIZE / 4),
             score=find_board_score(app.game_board, app.PLAYER_MARBLES[Player.ONE]),
@@ -157,13 +189,19 @@ class Display:
         )
 
         # P2 score
-        render_score(
+        self._ids_scores += render_score(
             canvas=self._canvas,
             pos=(BOARD_CELL_SIZE / 4, BOARD_CELL_SIZE / 4),
             score=find_board_score(app.game_board, app.PLAYER_MARBLES[Player.TWO]),
             color=MARBLE_COLORS[app.PLAYER_MARBLES[Player.ONE]]
         )
 
+    def _render_game(self, app):
+        self._render_turn_indicator(
+            player_unit=app.PLAYER_MARBLES[app.game_turn],
+            game_over=app.game_over,
+        )
+        self._render_scores(app)
         self._render_board(app)
 
     def _render_board(self, app):
@@ -188,7 +226,7 @@ class Display:
             self._marbles.append(Marble(
                 pos=marble_pos,
                 cell=marble_cell,
-                kind=cell_state,
+                kind=marble_kind,
                 object_ids=self._render_marble(app, marble_pos, marble_cell, marble_kind)
             ))
 
@@ -199,7 +237,7 @@ class Display:
             size=MARBLE_SIZE,
             color=(palette.COLOR_GRAY
                 if (app.game_over
-                    and kind == app.PLAYER_MARBLES[app.game_turn])
+                    and kind != app.PLAYER_MARBLES[app.game_winner])
                 else MARBLE_COLORS[kind]),
             selected=(app.selection and app.selection.pieces()
                 and cell in app.selection.pieces()),
@@ -209,7 +247,7 @@ class Display:
     def _find_marble_by_cell(self, cell):
         return next((m for m in self._marbles if m.cell == cell), None)
 
-    def perform_move(self, move, board):
+    def perform_move(self, move, board, on_end=None):
         move_cells = list(move.pieces())
         move_target = move.target_cell()
         if board[move_target] != BoardCellState:
@@ -223,6 +261,7 @@ class Display:
                 easing=ease_out,
                 src=cell,
                 dest=marble.cell,
+                on_end=on_end,
             ))
             if marble.cell not in board:
                 self._anims.append(MarbleShrinkAnim(
