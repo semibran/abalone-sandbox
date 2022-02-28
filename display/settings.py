@@ -1,11 +1,18 @@
 from tkinter import Toplevel, StringVar
 from tkinter.ttk import Frame, Label, OptionMenu, Button
 from core.app_config import AppConfig, ControlMode
+from core.board_layout import BoardLayout
 
-GAME_MODES = {
+GAME_MODE_MAP = {
     "Human vs. Computer": (ControlMode.HUMAN, ControlMode.CPU),
     "Human vs. Human": (ControlMode.HUMAN, ControlMode.HUMAN),
     "Computer vs. Computer": (ControlMode.CPU, ControlMode.CPU),
+}
+
+STARTING_LAYOUT_MAP = {
+    "Standard": BoardLayout.STANDARD,
+    "German Daisy": BoardLayout.GERMAN_DAISY,
+    "Belgian Daisy": BoardLayout.BELGIAN_DAISY,
 }
 
 class SettingsWindow:
@@ -19,8 +26,15 @@ class SettingsWindow:
         frame.pack()
         frame_rows = []
 
+        starting_layout = StringVar(frame)
+        starting_layouts = [*STARTING_LAYOUT_MAP.keys()]
+        frame_rows.append((
+            Label(frame, text="Starting Layout"),
+            OptionMenu(frame, starting_layout, starting_layouts[0], *starting_layouts),
+        ))
+
         game_mode = StringVar(frame)
-        game_modes = [*GAME_MODES.keys()]
+        game_modes = [*GAME_MODE_MAP.keys()]
         frame_rows.append((
             Label(frame, text="Game Mode"),
             OptionMenu(frame, game_mode, game_modes[0], *game_modes),
@@ -28,11 +42,12 @@ class SettingsWindow:
 
         for i, (key_widget, value_widget) in enumerate(frame_rows):
             key_widget.grid(column=0, row=i, sticky='e', ipadx=4)
-            value_widget.grid(column=1, row=i, sticky='w', ipadx=4)
+            value_widget.grid(column=1, row=i, sticky='w', ipadx=4, ipady=4)
 
         Button(frame, text="Confirm", command=on_close and (lambda: (
             on_close(AppConfig(
-                control_modes=next((v for k, v in GAME_MODES.items() if k == game_mode.get()), None)
+                starting_layout=next((v for k, v in STARTING_LAYOUT_MAP.items() if k == starting_layout.get()), None),
+                control_modes=next((v for k, v in GAME_MODE_MAP.items() if k == game_mode.get()), None),
             )),
             window.destroy(),
         ))).grid(columnspan=2, column=0, row=i + 1, pady=8)
