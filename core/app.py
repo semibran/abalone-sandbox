@@ -119,9 +119,7 @@ class App:
 
     def start(self):
         self._new_game()
-        self._display.open({
-            "select_cell": lambda cell: self._select_cell(cell)
-        })
+        self._display.open(on_click=lambda cell: self._select_cell(cell))
         self._display.render(self)
 
         start_time = None

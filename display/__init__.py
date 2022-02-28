@@ -58,7 +58,7 @@ class Display:
     def anims(self):
         return self._anims
 
-    def open(self, actions):
+    def open(self, on_click):
         self._window = Tk()
         self._window.title(self._title)
 
@@ -69,7 +69,7 @@ class Display:
             rh := BOARD_CELL_SIZE / sqrt(3),
             x := event.x - rw - (BOARD_MAXCOLS - BOARD_SIZE) * rw,
             y := event.y - rw,
-            actions["select_cell"](Hex(*point_to_hex((x, y), rh)))
+            on_click(Hex(*point_to_hex((x, y), rh)))
         ))
 
     def _update_anims(self):
