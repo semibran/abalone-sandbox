@@ -41,6 +41,7 @@ class Display:
         self._title = title
         self._window = None
         self._canvas = None
+        self._closed = False
         self._marbles = []
         self._anims = []
         self._ids_turn_indicator = []
@@ -50,9 +51,14 @@ class Display:
     def is_animating(self):
         return next((a for a in self._anims if not a.done), None)
 
+    @property
+    def closed(self):
+        return self._closed
+
     def open(self, on_click):
         self._window = Tk()
         self._window.title(self._title)
+        self._window.protocol("WM_DELETE_WINDOW", lambda: setattr(self, "_closed", True))
 
         self._canvas = Canvas(self._window, width=BOARD_WIDTH, height=BOARD_HEIGHT, highlightthickness=0)
         self._canvas.pack()

@@ -27,7 +27,6 @@ class App:
         self.selection = None
         self._config = AppConfig()
         self._display = Display(title=APP_NAME)
-        self._done = False
 
     @property
     def game_board(self):
@@ -129,7 +128,7 @@ class App:
         self._new_game()
 
         start_time = None
-        while not self._done:
+        while not self._display.closed:
             start_time and ENABLED_FPS_DISPLAY and print(f"FPS: {1 / (time() - start_time):.2f}")
             start_time = time()
             self.update()
