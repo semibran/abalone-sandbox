@@ -2,8 +2,10 @@ from core.board_cell_state import BoardCellState
 import colors.palette as palette
 import colors.themes as themes
 
+# general settings
 APP_NAME = "Abalone"
 FPS = 60
+ENABLED_FPS_DISPLAY = False
 
 # rules
 BOARD_SIZE = 5

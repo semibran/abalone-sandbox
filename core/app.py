@@ -6,7 +6,7 @@ from core.move import Move
 from display import Display
 from core.hex import Hex, HexDirection
 from core.agent import Agent
-from config import APP_NAME, FPS
+from config import APP_NAME, FPS, ENABLED_FPS_DISPLAY
 
 CPU_DELAY = 1
 
@@ -124,7 +124,7 @@ class App:
 
         start_time = None
         while not self._done:
-            start_time and print(f"FPS: {1 / (time() - start_time):.2f}")
+            start_time and ENABLED_FPS_DISPLAY and print(f"FPS: {1 / (time() - start_time):.2f}")
             start_time = time()
             self.update()
             self._display.update()
