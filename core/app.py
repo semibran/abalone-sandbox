@@ -1,4 +1,4 @@
-from time import sleep
+from time import time, sleep
 from core.app_config import AppConfig, ControlMode
 from core.board_cell_state import BoardCellState
 from core.game import Game, Player, is_move_target_empty, count_marbles_in_line
@@ -124,7 +124,10 @@ class App:
         })
         self._display.render(self)
 
+        start_time = None
         while not self._done:
+            start_time and print(f"FPS: {1 / (time() - start_time):.2f}")
+            start_time = time()
             self.update()
             self._display.update()
             if self._display.anims:

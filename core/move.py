@@ -13,7 +13,7 @@ class Move:
 
     def __repr__(self):
         return "(" + ", ".join([
-            self.direction.name,
+            *([self.direction.name] if self.direction else []),
             format_cell(self.start),
             *([format_cell(self.end)] if self.end else [])
         ]) + ")"
