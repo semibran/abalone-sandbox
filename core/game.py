@@ -52,19 +52,23 @@ def is_move_target_empty(board, move):
     )), True)
 
 def count_marbles_in_line(board, cell, direction):
-    count = 0
+    marbles = find_marbles_in_line(board, cell, direction)
+    unit = board[cell]
+    if next((m for m in marbles if board[m] != unit), None):
+        return inf
+    return len(marbles)
+
+def find_marbles_in_line(board, cell, direction):
+    marbles = []
     unit = board[cell]
     if unit == BoardCellState.EMPTY:
-        return count
+        return marbles
 
-    while board[cell] == unit:
-        count += 1
+    while board[cell] not in (None, BoardCellState.EMPTY):
+        marbles.append(cell)
         cell = Hex.add(cell, direction.value)
 
-    if board[cell] not in (None, BoardCellState.EMPTY):
-        return inf
-
-    return count
+    return marbles
 
 def find_board_score(board, player_unit):
     enemy_unit = BoardCellState.next(player_unit)

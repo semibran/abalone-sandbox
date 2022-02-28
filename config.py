@@ -3,7 +3,7 @@ import colors.palette as palette
 import colors.themes as themes
 
 APP_NAME = "Abalone"
-FPS = 60
+FPS = 90
 
 # rules
 BOARD_SIZE = 5

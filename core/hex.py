@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from helpers.lerp import lerp
 
 HEX_NEIGHBORS = {}
 
@@ -22,6 +23,12 @@ class Hex:
 
     def invert(self):
         return Hex(-self.x, -self.y)
+
+    def lerp(self, other, time):
+        return Hex(
+            x=lerp(self.x, other.x, time),
+            y=lerp(self.y, other.y, time),
+        )
 
     def manhattan(self, other):
         return (abs(self.x - other.x)

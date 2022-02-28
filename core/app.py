@@ -1,11 +1,12 @@
+from time import sleep
 from core.app_config import AppConfig, ControlMode
 from core.board_cell_state import BoardCellState
 from core.game import Game, Player, is_move_target_empty, count_marbles_in_line
 from core.move import Move
-from core.display import Display
+from display import Display
 from core.hex import Hex, HexDirection
 from core.agent import Agent
-from config import APP_NAME
+from config import APP_NAME, FPS
 
 CPU_DELAY = 1
 
@@ -26,7 +27,7 @@ class App:
         self.selection = None
         self._config = AppConfig()
         self._display = Display(title=APP_NAME)
-        self._cpu_countdown = 0
+        self._done = False
 
     @property
     def game_board(self):
@@ -85,9 +86,9 @@ class App:
             normal = Hex.subtract(cell, self.selection.head())
             self.selection.direction = HexDirection.resolve(normal)
             if self.selection.is_inline():
-                attackers = len(self.selection.pieces())
-                defenders = count_marbles_in_line(self.game_board, cell, self.selection.direction)
-                if attackers > defenders:
+                num_attackers = len(self.selection.pieces())
+                num_defenders = count_marbles_in_line(self.game_board, cell, self.selection.direction)
+                if num_attackers > num_defenders:
                     self._apply_selection()
             self.selection = None
 
@@ -95,23 +96,31 @@ class App:
             self.selection = None
 
     def _apply_selection(self):
-        self.game.perform_move(self.selection)
+        self._perform_move(self.selection)
         self.selection = None
-        self._cpu_countdown = CPU_DELAY
+
+    def _perform_move(self, move):
+        self._display.perform_move(move, self.game_board)
+        self.game.perform_move(move)
 
     def update(self):
-        if self._cpu_countdown:
-            self._cpu_countdown -= 1
-        elif self._config.control_modes[self.game.turn.value] == ControlMode.CPU:
+        if self._display.anims:
+            return
+
+        if self._config.control_modes[self.game.turn.value] == ControlMode.CPU:
             cpu_move = Agent.request_move(
                 board=self.game_board,
                 player_unit=self.PLAYER_MARBLES[self.game.turn]
             )
             if cpu_move:
-                self.game.perform_move(cpu_move)
+                self._perform_move(cpu_move)
 
     def start(self):
         self._new_game()
-        self._display.open(self, {
+        self._display.open({
             "select_cell": lambda cell: self._select_cell(cell)
         })
+        while not self._done:
+            self.update()
+            self._display.render(self)
+            sleep(1 / FPS)
