@@ -203,8 +203,9 @@ class Agent:
         for cell, cell_state in board.enumerate():
             if cell_state != player_unit:
                 continue
-            board_center = Hex(board.height // 2, board.height // 2)
-            score += pow(board.height // 2 - Hex.manhattan(cell, board_center), 2)
+            board_radius = board.height // 2
+            board_center = Hex(board_radius, board_radius)
+            score += (board_radius - Hex.manhattan(cell, board_center) - 1) * 2
         return score
 
     @classmethod
