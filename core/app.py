@@ -45,6 +45,7 @@ class App:
         return self.game.winner
 
     def _new_game(self):
+        self.selection = None
         self.game = Game(layout=self._config.starting_layout)
         self._display.clear_board()
         self._display.render(self)
@@ -112,7 +113,7 @@ class App:
         self.game.perform_move(move)
 
     def update(self):
-        if self._display.is_animating:
+        if self._display.is_animating or self._display.is_settings_open:
             return
 
         if self._config.control_modes[self.game.turn.value] == ControlMode.CPU:
@@ -127,6 +128,13 @@ class App:
         self._display.open(
             on_click=lambda cell: self._select_cell(cell),
             on_reset=lambda: self.game.ply and self._display.confirm_reset() and self._new_game(),
+            on_settings=lambda: (
+                (not self.game.ply or self._display.confirm_settings())
+                    and self._display.open_settings(on_close=lambda config: (
+                        setattr(self, "_config", config),
+                        self._new_game(),
+                    ))
+            )
         )
         self._new_game()
 
