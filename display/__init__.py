@@ -255,7 +255,10 @@ class Display:
                 canvas=self._canvas,
                 pos=hex_to_point(marble_cell, app.game_board),
                 size=marble_size,
-                color=MARBLE_COLORS[marble.value],
+                color=(palette.COLOR_GRAY
+                    if (app.game_over
+                        and marble.value == app.PLAYER_MARBLES[app.game_turn])
+                    else MARBLE_COLORS[marble.value]),
                 selected=is_cell_selected,
                 focused=is_cell_focused,
             )
