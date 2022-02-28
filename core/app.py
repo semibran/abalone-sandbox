@@ -46,7 +46,7 @@ class App:
 
     def _new_game(self):
         self.game = Game(layout=self._config.starting_layout)
-        self._display.clear()
+        self._display.clear_board()
         self._display.render(self)
 
     def _select_cell(self, cell):
