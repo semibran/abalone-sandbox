@@ -12,11 +12,13 @@ class Move:
     direction: HexDirection = None
 
     def __repr__(self):
-        return "(" + ", ".join([
+        return "->".join((
+            "..".join((
+                format_cell(self.start),
+                *([format_cell(self.end)] if self.end else [])
+            )),
             *([self.direction.name] if self.direction else []),
-            format_cell(self.start),
-            *([format_cell(self.end)] if self.end else [])
-        ]) + ")"
+        ))
 
     def head(self):
         if self.direction is None:

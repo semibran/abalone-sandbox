@@ -28,6 +28,10 @@ class SettingsWindow:
     def open(current_config, on_close):
         window = Toplevel()
         window.title("Settings")
+        window.protocol("WM_DELETE_WINDOW", lambda: (
+            on_close and on_close(current_config),
+            window.destroy(),
+        ))
 
         frame = Frame(window, padding=8)
         frame.pack()

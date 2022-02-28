@@ -135,8 +135,10 @@ class App:
             on_settings=lambda: (
                 (not self.game.ply or self._display.confirm_settings())
                     and self._display.open_settings(self._config, on_close=lambda config: (
-                        setattr(self, "_config", config),
-                        self._new_game(),
+                        config != self._config and (
+                            setattr(self, "_config", config),
+                            self._new_game(),
+                        )
                     ))
             )
         )
