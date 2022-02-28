@@ -95,6 +95,8 @@ class App:
         else:
             self.selection = None
 
+        self._display.render(self)
+
     def _apply_selection(self):
         self._perform_move(self.selection)
         self.selection = None
@@ -120,7 +122,11 @@ class App:
         self._display.open({
             "select_cell": lambda cell: self._select_cell(cell)
         })
+        self._display.render(self)
+
         while not self._done:
             self.update()
-            self._display.render(self)
+            self._display.update()
+            if self._display.anims:
+                self._display.render(self)
             sleep(1 / FPS)

@@ -5,8 +5,9 @@ from helpers.point_to_hex import point_to_hex
 from core.game import Player, find_board_score, find_marbles_in_line
 from core.board_cell_state import BoardCellState
 from core.hex import Hex
+from display.anims.tween import TweenAnim
 from display.anims.hex_tween import HexTweenAnim
-from helpers.easing_expo import ease_out
+from helpers.easing_expo import ease_out, ease_in
 import colors.palette as palette
 from colors.transform import darken_color, lighten_color
 from config import (
@@ -138,6 +139,12 @@ def render_score(canvas, pos, score, color):
             size=MARBLE_SIZE
         )
 
+class MarbleMoveAnim(HexTweenAnim):
+    duration = 10
+
+class MarbleShrinkAnim(TweenAnim):
+    duration = 7
+
 @dataclass
 class Marble:
     cell: tuple[int, int]
@@ -173,11 +180,13 @@ class Display:
     def _update_anims(self):
         self._anims = [(a.update(), a)[-1] for a in self._anims if not a.done]
 
+    def update(self):
+        self._update_anims()
+        self._window.update()
+
     def render(self, app):
         self._canvas.delete("all") # TODO: smart redrawing
-        self._update_anims()
         self._render_game(app)
-        self._window.update()
 
     def _render_game(self, app):
         player_marble = app.PLAYER_MARBLES[app.game_turn]
@@ -230,15 +239,22 @@ class Display:
             self._marbles = marbles
 
         for marble in self._marbles:
-            marble_anim = next((a for a in self._anims if a.target is marble), None)
-            marble_cell = (marble_anim.cell
-                if marble_anim
-                else marble.cell)
+            marble_cell = marble.cell
+            marble_size = MARBLE_SIZE
+
+            marble_anims = [a for a in self._anims if a.target is marble]
+            for marble_anim in marble_anims:
+                if isinstance(marble_anim, MarbleMoveAnim):
+                    marble_cell = marble_anim.cell
+                elif isinstance(marble_anim, MarbleShrinkAnim):
+                    marble_size *= 1 - marble_anim.pos
+
             is_cell_selected = app.selection and app.selection.pieces() and marble_cell in app.selection.pieces()
             is_cell_focused = app.selection and marble_cell == app.selection.head()
             render_marble(
                 canvas=self._canvas,
                 pos=hex_to_point(marble_cell, app.game_board),
+                size=marble_size,
                 color=MARBLE_COLORS[marble.value],
                 selected=is_cell_selected,
                 focused=is_cell_focused,
@@ -256,10 +272,16 @@ class Display:
         marble_cells = [(marble, c) for c in move_cells if (marble := self._find_marble_by_cell(c))]
         for marble, cell in marble_cells:
             marble.cell = Hex.add(cell, move.direction.value)
-            self._anims.append(HexTweenAnim(
+            self._anims.append(MarbleMoveAnim(
                 target=marble,
-                duration=10,
                 easing=ease_out,
                 src=cell,
                 dest=marble.cell,
             ))
+            if marble.cell not in board:
+                self._anims.append(MarbleShrinkAnim(
+                    target=marble,
+                    easing=ease_in,
+                    delay=MarbleMoveAnim.duration,
+                    on_end=lambda: self._marbles.remove(marble)
+                ))
