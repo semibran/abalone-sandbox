@@ -91,6 +91,7 @@ class Game:
         self.board = BoardLayout.setup_board(layout)
         self.turn = Player.ONE
         self.winner = None
+        self.ply = 0
 
     @property
     def over(self):
@@ -107,4 +108,5 @@ class Game:
             self.winner = self.turn
 
         self.turn = Player.next(self.turn)
+        self.ply += 1
         return True

@@ -124,7 +124,10 @@ class App:
                 self._perform_move(cpu_move)
 
     def start(self):
-        self._display.open(on_click=lambda cell: self._select_cell(cell))
+        self._display.open(
+            on_click=lambda cell: self._select_cell(cell),
+            on_reset=lambda: self.game.ply and self._display.confirm_reset() and self._new_game(),
+        )
         self._new_game()
 
         start_time = None
