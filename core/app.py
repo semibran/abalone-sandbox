@@ -44,6 +44,10 @@ class App:
     def game_winner(self):
         return self.game.winner
 
+    @property
+    def theme(self):
+        return self._config.theme
+
     def _new_game(self):
         self.selection = None
         self.game = Game(layout=self._config.starting_layout)

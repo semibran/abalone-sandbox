@@ -1,7 +1,3 @@
-from core.board_cell_state import BoardCellState
-import colors.palette as palette
-import colors.themes as themes
-
 # general settings
 APP_NAME = "Abalone"
 FPS = 60
@@ -14,7 +10,6 @@ NUM_EJECTED_MARBLES_TO_WIN = 6
 # display settings
 BOARD_CELL_SIZE = 48
 MARBLE_SIZE = BOARD_CELL_SIZE - 4
-MARBLE_COLORS = themes.THEME_DEFAULT
 ENABLED_LOW_QUALITY_MARBLES = False
 
 # helpers

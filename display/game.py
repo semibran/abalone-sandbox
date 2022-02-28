@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from tkinter import Canvas
 from helpers.point_to_hex import point_to_hex
 from helpers.hex_to_point import hex_to_point
+from helpers.easing_expo import ease_out, ease_in
 from core.game import Player, find_board_score, find_marbles_in_line
 from core.board_cell_state import BoardCellState
 from core.hex import Hex
@@ -10,13 +11,13 @@ from display.marble import render_marble
 from display.score import render_score
 from display.anims.tween import TweenAnim
 from display.anims.hex_tween import HexTweenAnim
-from helpers.easing_expo import ease_out, ease_in
 import colors.palette as palette
+import colors.themes as themes
 from config import (
     BOARD_SIZE, BOARD_MAXCOLS,
     BOARD_CELL_SIZE,
     BOARD_WIDTH, BOARD_HEIGHT,
-    MARBLE_SIZE, MARBLE_COLORS,
+    MARBLE_SIZE,
 )
 
 @dataclass
@@ -62,6 +63,7 @@ class GameDisplay:
     def clear(self):
         self._delete_marbles()
         self._clear_hud()
+        self._canvas.delete("all")
 
     def update(self):
         self._update_anims()
@@ -79,6 +81,7 @@ class GameDisplay:
         self._render_turn_indicator(
             player_unit=app.PLAYER_MARBLES[app.game_turn],
             game_over=app.game_over,
+            theme=app.theme,
         )
 
     def _clear_turn_indicator(self):
@@ -163,13 +166,13 @@ class GameDisplay:
         else:
             self._render_game(app)
 
-    def _render_turn_indicator(self, player_unit, game_over=False):
+    def _render_turn_indicator(self, player_unit, game_over=False, theme=themes.THEME_DEFAULT):
         self._ids_turn_indicator += render_marble(
             canvas=self._canvas,
             pos=(BOARD_WIDTH - BOARD_CELL_SIZE / 4, BOARD_CELL_SIZE / 4),
             color=(palette.COLOR_GRAY
                 if game_over
-                else MARBLE_COLORS[player_unit]),
+                else theme[player_unit]),
             size=BOARD_CELL_SIZE / 4,
         )
 
@@ -179,7 +182,7 @@ class GameDisplay:
             canvas=self._canvas,
             pos=(BOARD_CELL_SIZE / 4, BOARD_HEIGHT - BOARD_CELL_SIZE / 4),
             score=find_board_score(app.game_board, app.PLAYER_MARBLES[Player.ONE]),
-            color=MARBLE_COLORS[app.PLAYER_MARBLES[Player.TWO]]
+            color=app.theme[app.PLAYER_MARBLES[Player.TWO]]
         )
 
         # P2 score
@@ -187,13 +190,20 @@ class GameDisplay:
             canvas=self._canvas,
             pos=(BOARD_CELL_SIZE / 4, BOARD_CELL_SIZE / 4),
             score=find_board_score(app.game_board, app.PLAYER_MARBLES[Player.TWO]),
-            color=MARBLE_COLORS[app.PLAYER_MARBLES[Player.ONE]]
+            color=app.theme[app.PLAYER_MARBLES[Player.ONE]]
         )
 
     def _render_game(self, app):
+        self._canvas.create_rectangle(
+            0, 0,
+            BOARD_WIDTH, BOARD_HEIGHT,
+            fill=app.theme["background"],
+            outline="",
+        )
         self._render_turn_indicator(
             player_unit=app.PLAYER_MARBLES[app.game_turn],
             game_over=app.game_over,
+            theme=app.theme,
         )
         self._render_scores(app)
         self._render_board(app)
@@ -209,7 +219,7 @@ class GameDisplay:
             self._canvas.create_oval(
                 x - MARBLE_SIZE / 2, y - MARBLE_SIZE / 2,
                 x + MARBLE_SIZE / 2, y + MARBLE_SIZE / 2,
-                fill=palette.COLOR_SILVER,
+                fill=app.theme["board_cell"],
                 outline="",
             )
             if not self._marbles and cell_state != BoardCellState.EMPTY:
@@ -232,7 +242,7 @@ class GameDisplay:
             color=(palette.COLOR_GRAY
                 if (app.game_over
                     and kind != app.PLAYER_MARBLES[app.game_winner])
-                else MARBLE_COLORS[kind]),
+                else app.theme[kind]),
             selected=(app.selection and app.selection.pieces()
                 and cell in app.selection.pieces()),
             focused=app.selection and cell == app.selection.head(),

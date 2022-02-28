@@ -2,6 +2,7 @@ from tkinter import Toplevel, StringVar
 from tkinter.ttk import Frame, Label, OptionMenu, Button
 from core.app_config import AppConfig, ControlMode
 from core.board_layout import BoardLayout
+import colors.themes as themes
 
 GAME_MODE_MAP = {
     "Human vs. Computer": (ControlMode.HUMAN, ControlMode.CPU),
@@ -13,6 +14,11 @@ STARTING_LAYOUT_MAP = {
     "Standard": BoardLayout.STANDARD,
     "German Daisy": BoardLayout.GERMAN_DAISY,
     "Belgian Daisy": BoardLayout.BELGIAN_DAISY,
+}
+
+THEME_MAP = {
+    "Default": themes.THEME_DEFAULT,
+    "Monochrome": themes.THEME_MONOCHROME,
 }
 
 class SettingsWindow:
@@ -31,7 +37,7 @@ class SettingsWindow:
         frame_rows.append((
             Label(frame, text="Starting Layout"),
             OptionMenu(frame, starting_layout,
-                next((k for k, v in STARTING_LAYOUT_MAP.items() if v == current_config.starting_layout)),
+                next((k for k, v in STARTING_LAYOUT_MAP.items() if v == current_config.starting_layout), starting_layouts[0]),
                 *starting_layouts),
         ))
 
@@ -40,8 +46,17 @@ class SettingsWindow:
         frame_rows.append((
             Label(frame, text="Game Mode"),
             OptionMenu(frame, game_mode,
-                next((k for k, v in GAME_MODE_MAP.items() if v == current_config.control_modes)),
+                next((k for k, v in GAME_MODE_MAP.items() if v == current_config.control_modes), game_modes[0]),
                 *game_modes),
+        ))
+
+        theme = StringVar(frame)
+        themes = [*THEME_MAP.keys()]
+        frame_rows.append((
+            Label(frame, text="Theme"),
+            OptionMenu(frame, theme,
+                next((k for k, v in THEME_MAP.items() if v == current_config.theme), themes[0]),
+                *themes),
         ))
 
         for i, (key_widget, value_widget) in enumerate(frame_rows):
@@ -52,6 +67,7 @@ class SettingsWindow:
             on_close and on_close(AppConfig(
                 starting_layout=next((v for k, v in STARTING_LAYOUT_MAP.items() if k == starting_layout.get()), None),
                 control_modes=next((v for k, v in GAME_MODE_MAP.items() if k == game_mode.get()), None),
+                theme=next((v for k, v in THEME_MAP.items() if k == theme.get()), None),
             )),
             window.destroy(),
         )).grid(columnspan=2, column=0, row=i + 1, pady=8)
