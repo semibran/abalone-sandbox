@@ -18,7 +18,7 @@ STARTING_LAYOUT_MAP = {
 class SettingsWindow:
 
     @staticmethod
-    def open(on_close):
+    def open(current_config, on_close):
         window = Toplevel()
         window.title("Settings")
 
@@ -30,24 +30,28 @@ class SettingsWindow:
         starting_layouts = [*STARTING_LAYOUT_MAP.keys()]
         frame_rows.append((
             Label(frame, text="Starting Layout"),
-            OptionMenu(frame, starting_layout, starting_layouts[0], *starting_layouts),
+            OptionMenu(frame, starting_layout,
+                next((k for k, v in STARTING_LAYOUT_MAP.items() if v == current_config.starting_layout)),
+                *starting_layouts),
         ))
 
         game_mode = StringVar(frame)
         game_modes = [*GAME_MODE_MAP.keys()]
         frame_rows.append((
             Label(frame, text="Game Mode"),
-            OptionMenu(frame, game_mode, game_modes[0], *game_modes),
+            OptionMenu(frame, game_mode,
+                next((k for k, v in GAME_MODE_MAP.items() if v == current_config.control_modes)),
+                *game_modes),
         ))
 
         for i, (key_widget, value_widget) in enumerate(frame_rows):
             key_widget.grid(column=0, row=i, sticky='e', ipadx=4)
             value_widget.grid(column=1, row=i, sticky='w', ipadx=4, ipady=4)
 
-        Button(frame, text="Confirm", command=on_close and (lambda: (
-            on_close(AppConfig(
+        Button(frame, text="Confirm", command=lambda: (
+            on_close and on_close(AppConfig(
                 starting_layout=next((v for k, v in STARTING_LAYOUT_MAP.items() if k == starting_layout.get()), None),
                 control_modes=next((v for k, v in GAME_MODE_MAP.items() if k == game_mode.get()), None),
             )),
             window.destroy(),
-        ))).grid(columnspan=2, column=0, row=i + 1, pady=8)
+        )).grid(columnspan=2, column=0, row=i + 1, pady=8)

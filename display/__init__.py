@@ -42,11 +42,11 @@ class Display:
         canvas = self._game_display.open(self._window, on_click)
         canvas.pack()
 
-    def open_settings(self, on_close=None):
+    def open_settings(self, current_config, on_close=None):
         if self._is_settings_open:
             return
         self._is_settings_open = True
-        SettingsWindow.open(lambda *args: (
+        SettingsWindow.open(current_config, lambda *args: (
             on_close and on_close(*args),
             setattr(self, "_is_settings_open", False)
         ))

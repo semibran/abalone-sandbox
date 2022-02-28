@@ -130,7 +130,7 @@ class App:
             on_reset=lambda: self.game.ply and self._display.confirm_reset() and self._new_game(),
             on_settings=lambda: (
                 (not self.game.ply or self._display.confirm_settings())
-                    and self._display.open_settings(on_close=lambda config: (
+                    and self._display.open_settings(self._config, on_close=lambda config: (
                         setattr(self, "_config", config),
                         self._new_game(),
                     ))
