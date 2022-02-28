@@ -18,6 +18,7 @@ STARTING_LAYOUT_MAP = {
 
 THEME_MAP = {
     "Default": themes.THEME_DEFAULT,
+    "Night": themes.THEME_DARK,
     "Monochrome": themes.THEME_MONOCHROME,
 }
 
