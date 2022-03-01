@@ -1,4 +1,3 @@
-from random import random
 from time import time
 from math import pow, inf
 from copy import deepcopy
@@ -15,6 +14,8 @@ class StateSpaceNode:
     children: list = field(default_factory=list)
 
 class Agent:
+    num_subtrees_pruned = 0
+    num_requests = 0
 
     @classmethod
     def request_move(cls, board, player_unit):
@@ -24,9 +25,9 @@ class Agent:
             return None
 
         if cls._should_use_lookaheads(board, player_unit):
-            state_space, _ = cls._enumerate_state_space(board, player_unit, depth=2)
+            state_space, _, num_prunes = cls._enumerate_state_space(board, player_unit, depth=2)
         else:
-            state_space, _ = cls._enumerate_state_space(board, player_unit, depth=1)
+            state_space, _, num_prunes = cls._enumerate_state_space(board, player_unit, depth=1)
 
         best_node = None
         for max_node in state_space:
@@ -35,22 +36,32 @@ class Agent:
 
         if best_node:
             best_move = best_node.move
-            cls._print_move_deconstruction(board, player_unit, best_move, best_node.score, time=(time() - start_time))
+            temp_board = deepcopy(board)
+            apply_move(temp_board, best_move)
+
+            cls.num_subtrees_pruned += num_prunes
+            cls.num_requests += 1
+
+            cls._print_move_deconstruction(
+                move=best_move,
+                time=(time() - start_time),
+                num_subtrees_pruned=num_prunes,
+                avg_subtrees_pruned=f"{cls.num_subtrees_pruned / cls.num_requests:.2f}",
+                heuristic_score=cls._heuristic_score(temp_board, player_unit),
+                heuristic_centralization=cls._heuristic_centralization(temp_board, player_unit),
+                heuristic_adjacency=cls._heuristic_adjacency(temp_board, player_unit),
+                final_score=f"{best_node.score:.2f}",
+            )
             return best_move
 
     @classmethod
-    def _print_move_deconstruction(cls, board, player_unit, move, score, time):
-        temp_board = deepcopy(board)
-        apply_move(temp_board, move)
-        print(
-            "-- Heuristic overview"
-            f"\nFound {move} in {time:.4f}s"
-            f"\n- heuristic_score: {cls._heuristic_score(board, player_unit)}"
-            f"\n- heuristic_centralization: {cls._heuristic_centralization(board, player_unit)}"
-            f"\n- heuristic_adjacency: {cls._heuristic_adjacency(board, player_unit)}"
-            f"\n- final heuristic value: {score:.3f}"
-            "\n"
-        )
+    def _print_move_deconstruction(cls, move, time, **kwargs):
+        print("\n".join((
+            "-- Heuristic overview",
+            f"Found {move} in {time:.4f}s",
+            *[f"- {key}: {value}" for key, value in kwargs.items()],
+            "",
+        )))
 
     @classmethod
     def _should_use_lookaheads(cls, board, player_unit):
@@ -67,14 +78,16 @@ class Agent:
         if depth <= 0:
             max_score = cls._heuristic(board, player_unit)
             min_score = cls._heuristic(board, BoardCellState.next(player_unit))
-            return [], max_score - min_score
+            return [], max_score - min_score, 0
 
+        num_prunes = 0
         moves = cls._enumerate_player_moves(
             board,
             player_unit=(player_unit
                 if is_player
                 else BoardCellState.next(player_unit))
         )
+        moves.sort(key=lambda move: cls._estimate_move_score(board, move), reverse=True) # 53.35
 
         if is_player:
             value = -inf
@@ -85,7 +98,7 @@ class Agent:
 
                 # children -> all non-pruned moves min can make from this state
                 # value -> best move value for min
-                move_children, move_value = cls._enumerate_state_space(
+                move_children, move_value, move_prunes = cls._enumerate_state_space(
                     board=temp_board,
                     player_unit=player_unit,
                     depth=depth - 1,
@@ -96,9 +109,11 @@ class Agent:
 
                 # use this move if better for max
                 value = max(value, move_value)
+                num_prunes += move_prunes
 
                 # beta prune - this subtree has a move that is worse for min than the best move found for min (min will never go down this subtree!)
                 if value >= beta:
+                    num_prunes += 1
                     break
 
                 # use as new best move for max
@@ -107,7 +122,7 @@ class Agent:
                 # add this move to the state space with its heuristic value
                 state_space.append(StateSpaceNode(move, score=move_value, children=move_children))
 
-            return state_space, value
+            return state_space, value, num_prunes
 
         else: # find best move for min
             value = inf
@@ -118,7 +133,7 @@ class Agent:
 
                 # children -> all non-pruned moves max can make from this state
                 # value -> value of best move for max
-                move_children, move_value = cls._enumerate_state_space(
+                move_children, move_value, move_prunes = cls._enumerate_state_space(
                     board=temp_board,
                     player_unit=player_unit,
                     depth=depth - 1,
@@ -129,9 +144,11 @@ class Agent:
 
                 # use this move if better for min
                 value = min(value, move_value)
+                num_prunes += move_prunes
 
                 # alpha prune - this subtree has a move that is worse for max than the best move found for max (min will always take it!)
                 if value <= alpha:
+                    num_prunes += 1
                     break
 
                 # use as new best move for min (if max goes down this subtree)
@@ -140,7 +157,13 @@ class Agent:
                 # add this move to the state space with its heuristic value
                 state_space.append(StateSpaceNode(move, score=move_value, children=move_children))
 
-            return state_space, value
+            return state_space, value, num_prunes
+
+    @classmethod
+    def _estimate_move_score(cls, board, move):
+        WEIGHT_SUMITO = 10 # consider sumitos first
+        return (len(move.pieces())
+            + WEIGHT_SUMITO * (board[move.target_cell()] != BoardCellState.EMPTY))
 
     @classmethod
     def _enumerate_player_moves(cls, board, player_unit):
