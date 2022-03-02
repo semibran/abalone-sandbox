@@ -6,7 +6,6 @@ from core.hex import Hex
 from config import NUM_EJECTED_MARBLES_TO_WIN
 
 def apply_move(board, move):
-    num_ejected = 0
     unit = board[move.head()]
 
     for cell in move.pieces():
@@ -20,7 +19,6 @@ def apply_move(board, move):
         for _ in range(num_defenders):
             defender_cell = Hex.add(defender_cell, move.direction.value)
             if defender_cell not in board:
-                num_ejected += 1
                 break
             board[defender_cell] = defender_unit
 
@@ -28,7 +26,7 @@ def apply_move(board, move):
     for cell in move_targets:
         board[cell] = unit
 
-    return num_ejected
+    return board
 
 def is_move_legal(board, move):
     if is_move_target_empty(board, move):

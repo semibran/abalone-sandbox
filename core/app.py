@@ -1,4 +1,6 @@
 from time import time, sleep
+from threading import Thread
+from queue import Queue, Empty
 from core.app_config import AppConfig, ControlMode
 from core.board_cell_state import BoardCellState
 from core.game import Game, Player, is_move_target_empty, count_marbles_in_line
@@ -25,9 +27,14 @@ class App:
     def __init__(self):
         self.game = None
         self.selection = None
+        self._start_time = time()
         self._config = AppConfig()
         self._display = Display(title=APP_NAME)
-        self._start_time = time()
+        self._agent = Agent()
+        self._agent_queue = Queue()
+        self._agent_thread = None
+        self._agent_move = None
+        self._agent_done = False
 
     @property
     def game_board(self):
@@ -48,6 +55,36 @@ class App:
     @property
     def theme(self):
         return self._config.theme
+
+    def _setup_agent_thread(self):
+        if self._agent_thread:
+            self._agent_thread._stop()
+
+        agent_marble = self.PLAYER_MARBLES[self.game_turn]
+        best_move_gen = self._agent.gen_best_move(
+            board=self.game_board,
+            player_unit=agent_marble
+        )
+
+        def worker():
+            best_move = None
+            done = False
+            while not done:
+                try:
+                    best_move = next(best_move_gen)
+                except StopIteration:
+                    done = True
+
+                if best_move:
+                    self._agent_queue.put((best_move, done))
+
+        thread = Thread(target=worker)
+        thread.daemon = True
+        thread.start()
+        self._agent_thread = thread
+        self._agent_move = None
+        self._agent_done = False
+        return thread
 
     def _new_game(self):
         self.selection = None
@@ -115,22 +152,40 @@ class App:
         self.selection = None
 
     def _perform_move(self, move):
+        if self.game_over:
+            return
         self._display.perform_move(move, self.game_board, on_end=lambda: self._display.update_hud(self))
         self.game.perform_move(move)
+        if (not self.game_over
+        and self._config.control_modes[self.game_turn.value] == ControlMode.CPU):
+            self._setup_agent_thread()
 
     def update(self):
-        self._display.update_timer(start_time=self._start_time)
-
-        if self._display.is_animating or self._display.is_settings_open:
+        if self._display.is_settings_open:
             return
 
-        if self._config.control_modes[self.game.turn.value] == ControlMode.CPU:
-            cpu_move = Agent.request_move(
-                board=self.game_board,
-                player_unit=self.PLAYER_MARBLES[self.game.turn]
-            )
-            if cpu_move:
-                self._perform_move(cpu_move)
+        self._display.update_timer(start_time=self._start_time)
+
+        if self._agent_done:
+            best_move = self._agent_move
+            is_search_complete = self._agent_done
+        else:
+            try:
+                best_move, is_search_complete = self._agent_queue.get_nowait()
+                self._agent_queue.task_done()
+            except Empty:
+                best_move, is_search_complete = None, False
+
+            self._agent_move = best_move
+            self._agent_done = is_search_complete
+
+        if self._display.is_animating:
+            return
+
+        best_move and print(best_move)
+        if best_move and is_search_complete and self._config.control_modes[self.game_turn.value] == ControlMode.CPU:
+            self._perform_move(best_move)
+            self._agent_move = None
 
     def start(self):
         self._display.open(
