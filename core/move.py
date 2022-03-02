@@ -34,6 +34,20 @@ class Move:
         else:
             return self.start
 
+    def tail(self):
+        if self.direction is None:
+            return self.start or self.end
+
+        if self.start == self.end:
+            return self.start
+
+        disp = Hex.subtract(self.end, self.start)
+        normal = Hex(disp.x / (abs(disp.x) or 1), disp.y / (abs(disp.y) or 1))
+        if self.direction.value == normal:
+            return self.start
+        else:
+            return self.end
+
     def pieces(self):
         if self.end is None or self.end == self.start:
             return (self.start,)

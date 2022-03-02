@@ -1,4 +1,5 @@
 from core.hex import Hex
+from config import BOARD_SIZE
 
 def generate_empty_board(size):
   board = []
@@ -11,7 +12,7 @@ def generate_empty_board(size):
 class Board:
     def __init__(self, layout=None):
         self._layout = layout
-        self._data = generate_empty_board(size=5)
+        self._data = generate_empty_board(size=BOARD_SIZE)
         self._items = None
 
     @property
