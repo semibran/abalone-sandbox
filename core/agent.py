@@ -32,7 +32,12 @@ class Agent:
         best_score = -inf
         for move in self._enumerate_player_moves(board, player_unit):
             move_board = apply_move(board=deepcopy(board), move=move)
-            move_score = self._heuristic(move_board, player_unit)
+            move_score = self._find_board_score_for_min(
+                board=move_board,
+                player_unit=player_unit,
+                depth=1,
+                alpha=best_score,
+            )
             if move_score > best_score:
                 best_score = move_score
                 best_move = move
@@ -53,7 +58,50 @@ class Agent:
             heuristic_adjacency=self._heuristic_adjacency(best_board, player_unit),
             final_score=f"{best_score:.2f}",
         )
-        yield best_move
+
+    def _find_board_score_for_max(self, board, player_unit, depth=0, alpha=-inf, beta=inf):
+        if depth == 0:
+            max_score = self._heuristic(board, player_unit)
+            min_score = self._heuristic(board, BoardCellState.next(player_unit))
+            return max_score - min_score
+
+        best_score = -inf
+        for move in self._enumerate_player_moves(board, player_unit):
+            move_board = apply_move(board=deepcopy(board), move=move)
+            move_score = self._find_board_score_for_min(
+                board=move_board,
+                player_unit=player_unit,
+                depth=depth - 1,
+                alpha=alpha,
+                beta=beta,
+            )
+            best_score = max(best_score, move_score)
+            if best_score >= beta:
+                break
+            alpha = max(alpha, best_score)
+        return best_score
+
+    def _find_board_score_for_min(self, board, player_unit, depth=0, alpha=-inf, beta=inf):
+        if depth == 0:
+            max_score = self._heuristic(board, player_unit)
+            min_score = self._heuristic(board, BoardCellState.next(player_unit))
+            return max_score - min_score
+
+        best_score = inf
+        for move in self._enumerate_player_moves(board, player_unit):
+            move_board = apply_move(board=deepcopy(board), move=move)
+            move_score = self._find_board_score_for_max(
+                board=move_board,
+                player_unit=player_unit,
+                depth=depth - 1,
+                alpha=alpha,
+                beta=beta,
+            )
+            best_score = min(best_score, move_score)
+            if best_score <= alpha:
+                break
+            beta = min(beta, best_score)
+        return best_score
 
     def _print_move_deconstruction(self, move, time, **kwargs):
         print("\n".join((

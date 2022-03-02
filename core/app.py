@@ -76,11 +76,13 @@ class App:
                     done = True
 
                 if best_move:
+                    print("yield", best_move, done)
                     self._agent_queue.put((best_move, done))
 
         thread = Thread(target=worker)
         thread.daemon = True
         thread.start()
+
         self._agent_thread = thread
         self._agent_move = None
         self._agent_done = False
@@ -154,7 +156,9 @@ class App:
     def _perform_move(self, move):
         if self.game_over:
             return
-        self._display.perform_move(move, self.game_board, on_end=lambda: self._display.update_hud(self))
+        self._display.perform_move(move, self.game_board, on_end=lambda: (
+            self._display.update_hud(self)
+        ))
         self.game.perform_move(move)
         if (not self.game_over
         and self._config.control_modes[self.game_turn.value] == ControlMode.CPU):
@@ -164,7 +168,8 @@ class App:
         if self._display.is_settings_open:
             return
 
-        self._display.update_timer(start_time=self._start_time)
+        if not self.game_over:
+            self._display.update_timer(start_time=self._start_time)
 
         if self._agent_done:
             best_move = self._agent_move
@@ -182,7 +187,6 @@ class App:
         if self._display.is_animating:
             return
 
-        best_move and print(best_move)
         if best_move and is_search_complete and self._config.control_modes[self.game_turn.value] == ControlMode.CPU:
             self._perform_move(best_move)
             self._agent_move = None
