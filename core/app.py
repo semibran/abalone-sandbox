@@ -135,7 +135,10 @@ class App:
     def start(self):
         self._display.open(
             on_click=lambda cell: self._select_cell(cell),
-            on_reset=lambda: self.game.ply and self._display.confirm_reset() and self._new_game(),
+            on_reset=lambda: (
+                (not self.game.ply or self._display.confirm_reset())
+                    and self._new_game()
+            ),
             on_settings=lambda: (
                 (not self.game.ply or self._display.confirm_settings())
                     and self._display.open_settings(self._config, on_close=lambda config: (
