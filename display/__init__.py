@@ -1,5 +1,7 @@
+from time import time
 from tkinter import Tk, messagebox
-from tkinter.ttk import Frame, Button
+from tkinter.ttk import Frame, Button, Label
+from helpers.format_secs import format_secs
 from display.game import GameDisplay
 from display.settings import SettingsWindow
 
@@ -33,10 +35,14 @@ class Display:
         header.pack(fill="x", expand=True, ipady=8)
 
         reset_button = Button(header, text="Reset", command=on_reset)
-        reset_button.pack(anchor="w", side="left", fill="x", padx=8)
+        reset_button.pack(anchor="w", side="left", padx=8)
+
+        timer_label = Label(header, text="0")
+        timer_label.pack(anchor="w", side="left", padx=0)
+        self._timer_label = timer_label
 
         settings_button = Button(header, text="Settings", command=on_settings)
-        settings_button.pack(anchor="e", side="right", padx=8)
+        settings_button.pack(anchor="e", side="right", fill="x", padx=8)
 
         self._game_display = GameDisplay()
         canvas = self._game_display.open(self._window, on_click)
@@ -66,6 +72,9 @@ class Display:
 
     def update_hud(self, app):
         self._game_display.update_hud(app)
+
+    def update_timer(self, start_time):
+        self._timer_label.config(text=format_secs(time() - start_time))
 
     def render(self, app):
         self._game_display.render(app)

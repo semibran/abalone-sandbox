@@ -27,6 +27,7 @@ class App:
         self.selection = None
         self._config = AppConfig()
         self._display = Display(title=APP_NAME)
+        self._start_time = time()
 
     @property
     def game_board(self):
@@ -53,6 +54,7 @@ class App:
         self.game = Game(layout=self._config.starting_layout)
         self._display.clear_board()
         self._display.render(self)
+        self._start_time = time()
 
     def _select_cell(self, cell):
         if self.game_over:
@@ -117,6 +119,8 @@ class App:
         self.game.perform_move(move)
 
     def update(self):
+        self._display.update_timer(start_time=self._start_time)
+
         if self._display.is_animating or self._display.is_settings_open:
             return
 
