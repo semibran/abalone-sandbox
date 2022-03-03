@@ -265,7 +265,6 @@ class GameDisplay:
                 easing=ease_out,
                 src=cell,
                 dest=marble.cell,
-                on_end=on_end,
             ))
             if marble.cell not in board:
                 self._anims.append(MarbleShrinkAnim(
@@ -274,3 +273,5 @@ class GameDisplay:
                     delay=MarbleMoveAnim.duration,
                     on_end=lambda: self._delete_marble(marble)
                 ))
+
+        self._anims[-1].on_end = on_end

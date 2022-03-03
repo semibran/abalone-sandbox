@@ -1,4 +1,3 @@
-from time import time
 from math import pow, inf
 from copy import deepcopy
 from dataclasses import dataclass, field
@@ -16,12 +15,12 @@ class StateSpaceNode:
 class Agent:
 
     def __init__(self):
+        self.interrupt = False
         self._num_requests = 0
         self._num_prunes_total = 0
         self._num_prunes_last = 0
 
     def gen_best_move(self, board, player_unit):
-        start_time = time()
         self._num_prunes_last = 0
         self._num_requests += 1
 
@@ -30,43 +29,40 @@ class Agent:
 
         best_move = None
         best_score = -inf
-        for move in self._enumerate_player_moves(board, player_unit):
-            move_board = apply_move(board=deepcopy(board), move=move)
-            move_score = self._find_board_score_for_min(
-                board=move_board,
-                player_unit=player_unit,
-                depth=1,
-                alpha=best_score,
-            )
-            if move_score > best_score:
-                best_score = move_score
-                best_move = move
-                yield best_move
+        depth = 0
+        self.interrupt = False
+        while not self.interrupt:
+            for move in self._enumerate_player_moves(board, player_unit):
+                move_board = apply_move(board=deepcopy(board), move=move)
+                move_score = self._find_board_score_for_min(
+                    board=move_board,
+                    player_unit=player_unit,
+                    depth=depth,
+                    alpha=best_score,
+                )
 
-        self._num_prunes_total += self._num_prunes_last
-        if best_move is None:
-            return
+                if move_score >= best_score:
+                    best_score = move_score
+                    best_move = move
+                    yield best_move
 
-        best_board = apply_move(board=deepcopy(board), move=best_move)
-        self._print_move_deconstruction(
-            move=best_move,
-            time=(time() - start_time),
-            num_subtrees_pruned=self._num_prunes_last,
-            avg_subtrees_pruned=f"{self._num_prunes_total / self._num_requests:.2f}",
-            heuristic_score=self._heuristic_score(best_board, player_unit),
-            heuristic_centralization=self._heuristic_centralization(best_board, player_unit),
-            heuristic_adjacency=self._heuristic_adjacency(best_board, player_unit),
-            final_score=f"{best_score:.2f}",
-        )
+                if self.interrupt:
+                    break
 
-    def _find_board_score_for_max(self, board, player_unit, depth=0, alpha=-inf, beta=inf):
+            depth += 1
+
+    def _find_board_score_for_max(self, board, player_unit, depth=0, alpha=-inf, beta=inf, color=1):
         if depth == 0:
-            max_score = self._heuristic(board, player_unit)
-            min_score = self._heuristic(board, BoardCellState.next(player_unit))
-            return max_score - min_score
+            return self._heuristic(board, player_unit)
+
+        unit = (player_unit
+            if color == 1
+            else BoardCellState.next(player_unit))
 
         best_score = -inf
-        for move in self._enumerate_player_moves(board, player_unit):
+        for move in self._enumerate_player_moves(board, unit):
+            if self.interrupt:
+                return inf
             move_board = apply_move(board=deepcopy(board), move=move)
             move_score = self._find_board_score_for_min(
                 board=move_board,
@@ -77,18 +73,23 @@ class Agent:
             )
             best_score = max(best_score, move_score)
             if best_score >= beta:
+                self._num_prunes_last += 1
                 break
             alpha = max(alpha, best_score)
         return best_score
 
-    def _find_board_score_for_min(self, board, player_unit, depth=0, alpha=-inf, beta=inf):
+    def _find_board_score_for_min(self, board, player_unit, depth=0, alpha=-inf, beta=inf, color=-1):
         if depth == 0:
-            max_score = self._heuristic(board, player_unit)
-            min_score = self._heuristic(board, BoardCellState.next(player_unit))
-            return max_score - min_score
+            return self._heuristic(board, player_unit)
+
+        unit = (player_unit
+            if color == 1
+            else BoardCellState.next(player_unit))
 
         best_score = inf
-        for move in self._enumerate_player_moves(board, player_unit):
+        for move in self._enumerate_player_moves(board, unit):
+            if self.interrupt:
+                return -inf
             move_board = apply_move(board=deepcopy(board), move=move)
             move_score = self._find_board_score_for_max(
                 board=move_board,
@@ -96,9 +97,11 @@ class Agent:
                 depth=depth - 1,
                 alpha=alpha,
                 beta=beta,
+                color=-color,
             )
             best_score = min(best_score, move_score)
             if best_score <= alpha:
+                self._num_prunes_last += 1
                 break
             beta = min(beta, best_score)
         return best_score
