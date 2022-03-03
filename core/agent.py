@@ -3,14 +3,47 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from core.hex import Hex, HexDirection
 from core.move import Move
+from core.board import Board
 from core.board_cell_state import BoardCellState
+from core.board_hasher import hash_board
 from core.game import apply_move, is_move_legal, find_board_score
 
 @dataclass
-class StateSpaceNode:
-    move: Move
+class StateSpace:
+    board: Board
+    move: Move = None
     score: float = None
     children: list = field(default_factory=list)
+
+@dataclass
+class TranspositionTable:
+
+    def __init__(self):
+        self._table = {}
+        self._cache_hash = None, None
+
+    def _hash_board(self, board):
+        """
+        Uses the most recently calculated hash if existent.
+        """
+        cached_hash, cached_board = self._cache_hash
+        if board is cached_board:
+            hash = cached_hash
+        else:
+            hash = hash_board(board)
+            self._cache_hash = (hash, board)
+        return hash
+
+    def __contains__(self, board):
+        return self._hash_board(board) in self._table
+
+    def __getitem__(self, board):
+        board_hash = self._hash_board(board)
+        return self._table[board_hash]
+
+    def __setitem__(self, board, node):
+        board_hash = self._hash_board(board)
+        self._table[board_hash] = node
 
 class Agent:
 
@@ -19,6 +52,7 @@ class Agent:
         self._num_requests = 0
         self._num_prunes_total = 0
         self._num_prunes_last = 0
+        self._transposition_table = TranspositionTable()
 
     def gen_best_move(self, board, player_unit):
         self._num_prunes_last = 0
@@ -27,8 +61,9 @@ class Agent:
         # search_depth = 1 + self._should_use_lookaheads(board, player_unit)
         # state_space_gen = self._enumerate_state_space(board, player_unit, depth=search_depth)
 
-        best_move = None
         best_score = -inf
+        best_move = None
+        best_board = None
         depth = 0
         self.interrupt = False
         while not self.interrupt:
@@ -46,6 +81,7 @@ class Agent:
                 if move_score >= best_score:
                     best_score = move_score
                     best_move = move
+                    best_board = move_board
                     yield best_move
 
                 if self.interrupt:
@@ -53,22 +89,38 @@ class Agent:
             depth += 1
             not self.interrupt and print(f"completed search at depth {depth}")
 
+        best_node = self._transposition_table[best_board]
+        best_children = sorted(best_node.children, key=lambda child: child.score)
+        best_followup = best_children[0].move
+        print(f"best response from {BoardCellState.next(player_unit)} is {best_followup} ({best_children[0].score:.2f}) out of {len(best_children)} move(s)")
+        print(", ".join([f"{child.move}: {child.score:.2f}" for child in best_children]))
+
         self._num_prunes_total += self._num_prunes_last
         print(f"pruned {self._num_prunes_last} subtrees ({self._num_prunes_total / self._num_requests:.2f} avg)")
 
     def _negamax(self, board, player_unit, depth, alpha, beta, color):
+        if board in self._transposition_table:
+            state_space = self._transposition_table[board]
+        else:
+            state_space = self._transposition_table[board] = StateSpace(board)
+
         if depth == 0:
-            return self._heuristic(board, player_unit) * color
+            terminal_score = self._heuristic(board, player_unit) * color
+            state_space.score = terminal_score
+            return terminal_score
 
         unit = (player_unit
             if color == 1
             else BoardCellState.next(player_unit))
         moves = self._enumerate_player_moves(board, unit)
 
+        print(f"enumerate {len(moves)}")
+
         best_score = -inf
         for move in moves:
             if self.interrupt:
                 return best_score
+
             move_board = apply_move(board=deepcopy(board), move=move)
             move_score = -self._negamax(
                 board=move_board,
@@ -78,11 +130,22 @@ class Agent:
                 beta=-alpha,
                 color=-color,
             )
-            best_score = max(best_score, move_score)
+            child_space = self._transposition_table[move_board]
+            child_space.score = move_score
+            child_space.move = move
+            if child_space not in state_space.children:
+                state_space.children.append(child_space)
+
+            if unit == BoardCellState.WHITE:
+                if move_score > best_score:
+                    print(f"new best move for {unit} is {move} with score {move_score:.2f}")
+
+            best_score = state_space.score = max(best_score, move_score)
             alpha = max(alpha, best_score)
             if alpha >= beta:
                 self._num_prunes_last += 1
                 break
+
         return best_score
 
     def _should_use_lookaheads(self, board, player_unit):
@@ -93,88 +156,6 @@ class Agent:
             if next((n for n in Hex.neighbors(cell) if board[n] == BoardCellState.next(player_unit)), False):
                 num_adjacent_enemies += 1
         return num_adjacent_enemies >= 2
-
-    def _enumerate_state_space(self, board, player_unit, depth=inf, alpha=-inf, beta=inf, is_player=True):
-        if depth <= 0:
-            max_score = self._heuristic(board, player_unit)
-            min_score = self._heuristic(board, BoardCellState.next(player_unit))
-            return [], max_score - min_score
-
-        moves = self._enumerate_player_moves(
-            board,
-            player_unit=(player_unit
-                if is_player
-                else BoardCellState.next(player_unit))
-        )
-        moves.sort(key=lambda move: self._estimate_move_score(board, move), reverse=True) # best avg: 53.35
-
-        if is_player:
-            value = -inf
-            state_space = []
-            for move in moves:
-                temp_board = deepcopy(board)
-                apply_move(temp_board, move)
-
-                # children -> all non-pruned moves min can make from this state
-                # value -> best move value for min
-                move_children, move_value = self._enumerate_state_space(
-                    board=temp_board,
-                    player_unit=player_unit,
-                    depth=depth - 1,
-                    alpha=alpha,
-                    beta=beta,
-                    is_player=False,
-                )
-
-                # use this move if better for max
-                value = max(value, move_value)
-
-                # beta prune - this subtree has a move that is worse for min than the best move found for min (min will never go down this subtree!)
-                if value >= beta:
-                    self._num_prunes_last += 1
-                    break
-
-                # use as new best move for max
-                alpha = max(alpha, value)
-
-                # add this move to the state space with its heuristic value
-                state_space.append(StateSpaceNode(move, score=move_value, children=move_children))
-
-            return state_space, value
-
-        else: # find best move for min
-            value = inf
-            state_space = []
-            for move in moves:
-                temp_board = deepcopy(board)
-                apply_move(temp_board, move)
-
-                # children -> all non-pruned moves max can make from this state
-                # value -> value of best move for max
-                move_children, move_value = self._enumerate_state_space(
-                    board=temp_board,
-                    player_unit=player_unit,
-                    depth=depth - 1,
-                    alpha=alpha,
-                    beta=beta,
-                    is_player=True,
-                )
-
-                # use this move if better for min
-                value = min(value, move_value)
-
-                # alpha prune - this subtree has a move that is worse for max than the best move found for max (min will always take it!)
-                if value <= alpha:
-                    self._num_prunes_last += 1
-                    break
-
-                # use as new best move for min (if max goes down this subtree)
-                beta = min(beta, value)
-
-                # add this move to the state space with its heuristic value
-                state_space.append(StateSpaceNode(move, score=move_value, children=move_children))
-
-            return state_space, value
 
     def _estimate_move_score(self, board, move):
         WEIGHT_SUMITO = 10 # consider sumitos first
@@ -224,6 +205,11 @@ class Agent:
         return selection_shapes
 
     def _heuristic(self, board, player_unit):
+        max_score = self._heuristic_total(board, player_unit)
+        min_score = self._heuristic_total(board, BoardCellState.next(player_unit))
+        return max_score - min_score
+
+    def _heuristic_total(self, board, player_unit):
         return (100 * self._heuristic_score(board, player_unit)
             + self._heuristic_centralization(board, player_unit)
             + 0.1 * self._heuristic_adjacency(board, player_unit))
