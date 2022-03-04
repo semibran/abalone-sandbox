@@ -1,4 +1,5 @@
 import sys
+from os.path import splitext
 from copy import deepcopy
 from core.board_cell_state import BoardCellState
 from core.board import Board
@@ -22,8 +23,14 @@ def read_buffer(file_name):
         file_buffer = file.read()
     return file_buffer
 
+def write_boards(file_name, boards):
+    file_buffer = "\n".join([str(board) for board in boards])
+    with open(file_name, mode="w", encoding="utf-8") as file:
+        file.write(file_buffer)
+
 def main():
-    file_buffer = read_buffer(sys.argv[1])
+    file_name = sys.argv[1]
+    file_buffer = read_buffer(file_name)
 
     turn_line, pieces_line, _ = file_buffer.split("\n")
     turn = MAP_COLOR[turn_line]
@@ -43,7 +50,8 @@ def main():
     moves = Agent()._enumerate_player_moves(board, turn)
     print(len(moves), moves)
 
-
+    boards = [apply_move(deepcopy(board), move) for move in moves]
+    write_boards(f"{splitext(file_name)[0]}.board", boards)
 
 if __name__ == "__main__":
     main()
