@@ -23,6 +23,11 @@ def read_buffer(file_name):
         file_buffer = file.read()
     return file_buffer
 
+def write_moves(file_name, moves):
+    file_buffer = "\n".join([str(move) for move in moves])
+    with open(file_name, mode="w", encoding="utf-8") as file:
+        file.write(file_buffer)
+
 def write_boards(file_name, boards):
     file_buffer = "\n".join([str(board) for board in boards])
     with open(file_name, mode="w", encoding="utf-8") as file:
@@ -30,6 +35,7 @@ def write_boards(file_name, boards):
 
 def main():
     file_name = sys.argv[1]
+    file_base = splitext(file_name)[0]
     file_buffer = read_buffer(file_name)
 
     turn_line, pieces_line, _ = file_buffer.split("\n")
@@ -48,10 +54,10 @@ def main():
         board[piece_cell] = piece_color
 
     moves = Agent()._enumerate_player_moves(board, turn)
-    print(len(moves), moves)
+    write_moves(f"{file_base}.move", moves)
 
     boards = [apply_move(deepcopy(board), move) for move in moves]
-    write_boards(f"{splitext(file_name)[0]}.board", boards)
+    write_boards(f"{file_base}.board", boards)
 
 if __name__ == "__main__":
     main()
