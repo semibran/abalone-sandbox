@@ -3,6 +3,7 @@ from os.path import splitext
 from copy import deepcopy
 from core.board_cell_state import BoardCellState
 from core.board import Board
+from core.board_layout import BoardLayout
 from core.hex import Hex
 from core.agent import Agent
 from core.game import apply_move
@@ -24,34 +25,36 @@ def read_buffer(file_name):
     return file_buffer
 
 def write_moves(file_name, moves):
-    file_buffer = "\n".join([str(move) for move in moves])
+    file_buffer = "\n".join([str(move) for move in moves]) + "\n"
     with open(file_name, mode="w", encoding="utf-8") as file:
         file.write(file_buffer)
 
 def write_boards(file_name, boards):
-    file_buffer = "\n".join([str(board) for board in boards])
+    file_buffer = "\n".join([str(board) for board in boards]) + "\n"
     with open(file_name, mode="w", encoding="utf-8") as file:
         file.write(file_buffer)
 
 def main():
-    file_name = sys.argv[1]
-    file_base = splitext(file_name)[0]
-    file_buffer = read_buffer(file_name)
+    # file_name = sys.argv[1]
+    # file_base = splitext(file_name)[0]
+    # file_buffer = read_buffer(file_name)
 
-    turn_line, pieces_line, _ = file_buffer.split("\n")
-    turn = MAP_COLOR[turn_line]
+    # turn_line, pieces_line, _ = file_buffer.split("\n")
+    # turn = MAP_COLOR[turn_line]
 
-    pieces = []
-    piece_strs = pieces_line.split(",")
-    for piece_str in piece_strs:
-        piece_cell = convert_cell_to_hex(piece_str[0:2])
-        piece_color = MAP_COLOR[piece_str[-1]]
-        pieces.append((piece_cell, piece_color))
+    # pieces = []
+    # piece_strs = pieces_line.split(",")
+    # for piece_str in piece_strs:
+    #     piece_cell = convert_cell_to_hex(piece_str[0:2])
+    #     piece_color = MAP_COLOR[piece_str[-1]]
+    #     pieces.append((piece_cell, piece_color))
 
-    board = Board()
-    board.fill(BoardCellState.EMPTY)
-    for piece_cell, piece_color in pieces:
-        board[piece_cell] = piece_color
+    file_base = "TestStandard"
+    board = BoardLayout.setup_board(BoardLayout.STANDARD)
+    turn = BoardCellState.BLACK
+    # board.fill(BoardCellState.EMPTY)
+    # for piece_cell, piece_color in pieces:
+        # board[piece_cell] = piece_color
 
     moves = Agent()._enumerate_player_moves(board, turn)
     write_moves(f"{file_base}.move", moves)

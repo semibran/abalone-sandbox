@@ -39,8 +39,8 @@ class Hex:
 
     def manhattan(self, other):
         return (abs(self.x - other.x)
-            + abs(self.x + self.y - other.x - other.y)
-            + abs(self.y - other.y)) / 2
+            + abs(self.y - other.y)
+            + abs(self.x + self.y - other.x - other.y)) / 2
 
     def adjacent(self, other):
         return self.manhattan(other) == 1

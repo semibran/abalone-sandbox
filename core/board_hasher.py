@@ -1,10 +1,7 @@
-# WIP - need to figure out how to either:
-#   (1) efficiently update sumito hashes
-#   (2) make updated hashes line up with generated ones
-
 from random import getrandbits
 from core.board import Board
 from core.board_cell_state import BoardCellState
+from core.hex import Hex
 
 
 def setup_cell_indices():
@@ -43,10 +40,26 @@ def hash_board(board):
     return hash
 
 def update_hash(hash, board, move):
+    """
+    Updates a Zobrist hash with the given move.
+    Foregoes move validation in favor of speed.
+    """
+
     move_tail = move.tail()
     hash ^= get_piece_mask(move_tail, board[move_tail])
 
     move_target = move.target_cell()
     hash ^= get_piece_mask(move_target, board[move_tail])
+
+    if board[move_target] != board[move_tail]:
+        defender_color = board[move_target]
+        hash ^= get_piece_mask(move_target, defender_color)
+
+        push_target = move_target
+        while board[push_target] not in (None, BoardCellState.EMPTY):
+            push_target = Hex.add(push_target, move.direction.value)
+
+        if push_target in board:
+            hash ^= get_piece_mask(push_target, defender_color)
 
     return hash

@@ -13,6 +13,7 @@ class BoardLayout(Enum):
     STANDARD = load_board_layout_from_file_name("layouts/standard.json")
     GERMAN_DAISY = load_board_layout_from_file_name("layouts/german_daisy.json")
     BELGIAN_DAISY = load_board_layout_from_file_name("layouts/belgian_daisy.json")
+    TEST1 = load_board_layout_from_file_name("layouts/test_1.json")
 
     def setup_board(board_layout):
         board = Board(layout=board_layout)
