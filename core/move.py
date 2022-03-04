@@ -1,9 +1,5 @@
 from dataclasses import dataclass
 from core.hex import Hex, HexDirection
-from config import BOARD_MAXCOLS
-
-def format_cell(cell):
-    return f"{chr(cell.x + 65)}{BOARD_MAXCOLS - cell.y}"
 
 @dataclass
 class Move:
@@ -14,8 +10,8 @@ class Move:
     def __repr__(self):
         return "->".join((
             "..".join((
-                format_cell(self.start),
-                *([format_cell(self.end)] if self.end else [])
+                str(self.start),
+                *([str(self.end)] if self.end else [])
             )),
             *([self.direction.name] if self.direction else []),
         ))

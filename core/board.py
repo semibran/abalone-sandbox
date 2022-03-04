@@ -1,4 +1,5 @@
 from core.hex import Hex
+from core.board_cell_state import BoardCellState
 from config import BOARD_SIZE
 
 def generate_empty_board(size):
@@ -10,10 +11,22 @@ def generate_empty_board(size):
   return board
 
 class Board:
+
     def __init__(self, layout=None):
         self._layout = layout
         self._data = generate_empty_board(size=BOARD_SIZE)
         self._items = None
+
+    def __repr__(self):
+        STATE_MAP = {
+            1: "b",
+            2: "w",
+        }
+        pieces = [str(cell) + STATE_MAP[cell_state.value]
+            for cell, cell_state in self.enumerate()
+                if cell_state != BoardCellState.EMPTY]
+        pieces.sort(key=lambda piece: ord(piece[-1]) * 26 + ord(piece[0]) - 65)
+        return ",".join(pieces)
 
     @property
     def layout(self):
@@ -60,3 +73,7 @@ class Board:
                     item = (Hex(q, r), val)
                     self._items.append(item)
         return self._items
+
+    def fill(self, data):
+        for cell, _ in self.enumerate():
+            self[cell] = data

@@ -164,33 +164,30 @@ class Agent:
 
     def _enumerate_player_moves(self, board, player_unit):
         player_moves = []
-        known_selection_shapes = []
+        selection_shapes = self._enumerate_selection_shapes(board, player_unit)
+        for selection_shape in selection_shapes:
+            selection_shape = tuple(selection_shape)
+            if len(selection_shape) == 1:
+                start, end = selection_shape[0], None
+            else:
+                start, end = selection_shape
+            for direction in HexDirection:
+                move = Move(start, end, direction)
+                if is_move_legal(board, move):
+                    player_moves.append(move)
+        return player_moves
+
+    def _enumerate_selection_shapes(self, board, player_unit):
+        selection_shapes = []
         for cell, cell_state in board.enumerate():
             if cell_state is not player_unit:
                 continue
-            cell_moves = self._enumerate_cell_moves(board, cell, known_selection_shapes)
-            player_moves += cell_moves
-        return player_moves
+            cell_selection_shapes = self._enumerate_cell_selection_shapes(board, cell)
+            selection_shapes += [shape for shape in cell_selection_shapes if shape not in selection_shapes]
+        return selection_shapes
 
-    def _enumerate_cell_moves(self, board, cell, known_selection_shapes):
-        cell_moves = []
-        selection_shapes = self._find_selection_shapes(board, cell)
-        for shape in selection_shapes:
-            start, end = shape[0], shape[-1]
-            shape = {start, end}
-            if shape in known_selection_shapes:
-                continue
-            known_selection_shapes.append(shape)
-            for direction in HexDirection:
-                move = (Move(start, end, direction)
-                    if start != end
-                    else Move(start, direction=direction))
-                if is_move_legal(board, move):
-                    cell_moves.append(move)
-        return cell_moves
-
-    def _find_selection_shapes(self, board, origin):
-        selection_shapes = [[origin]]
+    def _enumerate_cell_selection_shapes(self, board, origin):
+        selection_shapes = [{origin, origin}]
         for direction in HexDirection:
             cell = origin
             shape = [cell]
@@ -200,7 +197,7 @@ class Agent:
                     break
                 shape.append(cell)
                 if len(shape) > 1:
-                    selection_shapes.append(shape.copy())
+                    selection_shapes.append({shape[0], shape[-1]})
 
         return selection_shapes
 

@@ -23,8 +23,8 @@ def offset_true_hex(board, cell):
 class App:
 
     PLAYER_MARBLES = {
-        Player.ONE: BoardCellState.WHITE,
-        Player.TWO: BoardCellState.BLACK
+        Player.ONE: BoardCellState.BLACK,
+        Player.TWO: BoardCellState.WHITE
     }
 
     def __init__(self):

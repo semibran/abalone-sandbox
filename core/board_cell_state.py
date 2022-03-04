@@ -2,8 +2,8 @@ from enum import Enum
 
 class BoardCellState(Enum):
     EMPTY = 0
-    WHITE = 1
-    BLACK = 2
+    BLACK = 1
+    WHITE = 2
 
     def next(cell_state):
         return (BoardCellState.BLACK

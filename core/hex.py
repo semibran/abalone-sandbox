@@ -1,13 +1,20 @@
 from dataclasses import dataclass
 from enum import Enum
 from helpers.lerp import lerp
+from config import BOARD_MAXCOLS
 
 HEX_NEIGHBORS = {}
+
+def format_cell(cell):
+    return f"{chr(BOARD_MAXCOLS - cell.y + 65 - 1)}{cell.x + 1}"
 
 @dataclass(frozen=True)
 class Hex:
     x: int
     y: int
+
+    def __repr__(self):
+        return format_cell(self)
 
     def __eq__(self, other):
         return self and other and self.x == other.x and self.y == other.y
