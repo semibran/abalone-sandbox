@@ -9,7 +9,7 @@ class ControlMode(Enum):
 
 @dataclass
 class AppConfig:
-    starting_layout: BoardLayout = BoardLayout.TEST1
+    starting_layout: BoardLayout = BoardLayout.STANDARD
     colours_inverted: bool = False
     control_modes: tuple[ControlMode, ControlMode] = (ControlMode.HUMAN, ControlMode.CPU)
     move_limits: tuple[int, int] = (50, 50)

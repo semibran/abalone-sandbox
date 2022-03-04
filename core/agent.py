@@ -90,7 +90,7 @@ class Agent:
             not self.interrupt and print(f"completed search at depth {depth}")
 
         best_node = self._transposition_table[best_board]
-        best_children = sorted(best_node.children, key=lambda child: child.score)
+        best_children = sorted(best_node.children, key=lambda child: child.score, reverse=True)
         best_followup = best_children[0].move
         print(f"best response from {BoardCellState.next(player_unit)} is {best_followup} ({best_children[0].score:.2f}) out of {len(best_children)} move(s)")
         print(", ".join([f"{child.move}: {child.score:.2f}" for child in best_children]))
@@ -114,7 +114,7 @@ class Agent:
             else BoardCellState.next(player_unit))
         moves = self._enumerate_player_moves(board, unit)
 
-        print(f"enumerate {len(moves)}")
+        # print(f"enumerate {len(moves)}")
 
         best_score = -inf
         for move in moves:
@@ -136,9 +136,9 @@ class Agent:
             if child_space not in state_space.children:
                 state_space.children.append(child_space)
 
-            if unit == BoardCellState.WHITE:
-                if move_score > best_score:
-                    print(f"new best move for {unit} is {move} with score {move_score:.2f}")
+            # if unit == BoardCellState.WHITE:
+            #     if move_score > best_score:
+            #         print(f"new best move for {unit} is {move} with score {move_score:.2f}")
 
             best_score = state_space.score = max(best_score, move_score)
             alpha = max(alpha, best_score)

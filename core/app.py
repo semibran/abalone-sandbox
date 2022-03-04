@@ -62,7 +62,6 @@ class App:
 
     def _setup_agent_thread(self):
         if self._agent_thread:
-            self._agent_thread.done = True
             self._agent_thread = None
 
         best_move_gen = self._agent.gen_best_move(
@@ -73,7 +72,7 @@ class App:
         def worker():
             best_move = None
             done_search = False
-            while not getattr(self._agent_thread, "done", False) and not done_search:
+            while not done_search:
                 try:
                     best_move = next(best_move_gen)
                 except StopIteration:
@@ -82,11 +81,9 @@ class App:
                 if best_move or done_search:
                     print("yield", best_move, done_search)
                     self._agent_queue.put((best_move, done_search))
-                    done_search and print()
 
         thread = Thread(target=worker)
         thread.daemon = True
-        thread.done = False
         thread.start()
 
         self._agent_thread = thread
@@ -197,8 +194,6 @@ class App:
                 if self._agent_move:
                     is_search_complete = True
                     self._agent.interrupt = True
-                    if self._agent_thread:
-                        self._agent_thread.done = True
 
             self._agent_move = best_move or self._agent_move
             self._agent_done = is_search_complete
