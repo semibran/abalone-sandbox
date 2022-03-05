@@ -5,12 +5,13 @@ from core.hex import Hex, HexDirection
 from core.move import Move
 from core.board import Board
 from core.board_cell_state import BoardCellState
-from core.board_hasher import hash_board
+from core.board_hasher import hash_board, update_hash
 from core.game import apply_move, is_move_legal, find_board_score
 
 @dataclass
 class StateSpace:
     board: Board
+    hash: int
     move: Move = None
     score: float = None
     children: list = field(default_factory=list)
@@ -34,16 +35,21 @@ class TranspositionTable:
             self._cache_hash = (hash, board)
         return hash
 
-    def __contains__(self, board):
-        return self._hash_board(board) in self._table
+    def __contains__(self, hash):
+        # TODO: do we even want to input boards?
+        if type(hash) is Board:
+            hash = self._hash_board(hash)
+        return hash in self._table
 
-    def __getitem__(self, board):
-        board_hash = self._hash_board(board)
-        return self._table[board_hash]
+    def __getitem__(self, hash):
+        if type(hash) is Board:
+            hash = self._hash_board(hash)
+        return self._table[hash]
 
-    def __setitem__(self, board, node):
-        board_hash = self._hash_board(board)
-        self._table[board_hash] = node
+    def __setitem__(self, hash, node):
+        if type(hash) is Board:
+            hash = self._hash_board(hash)
+        self._table[hash] = node
 
 class Agent:
 
@@ -52,36 +58,51 @@ class Agent:
         self._num_requests = 0
         self._num_prunes_total = 0
         self._num_prunes_last = 0
-        self._transposition_table = TranspositionTable()
+        self._board_cache = TranspositionTable()
 
     def gen_best_move(self, board, player_unit):
         self._num_prunes_last = 0
         self._num_requests += 1
 
-        # search_depth = 1 + self._should_use_lookaheads(board, player_unit)
-        # state_space_gen = self._enumerate_state_space(board, player_unit, depth=search_depth)
+        board_hash = hash_board(board)
+        if board_hash in self._board_cache:
+            state_space = self._board_cache[board_hash]
+        else:
+            state_space = self._board_cache[board_hash] = StateSpace(board, hash=board_hash)
 
         best_score = -inf
         best_move = None
         best_board = None
-        depth = 0
+        depth = 1
         self.interrupt = False
         while not self.interrupt:
+            alpha = -inf
+            beta = inf
             for move in self._enumerate_player_moves(board, player_unit):
                 move_board = apply_move(board=deepcopy(board), move=move)
+                move_hash = update_hash(board_hash, board, move)
                 move_score = -self._negamax(
                     board=move_board,
-                    player_unit=player_unit,
+                    board_hash=move_hash,
+                    color=player_unit,
+                    perspective=-1,
                     depth=depth,
-                    alpha=-inf,
-                    beta=-best_score,
-                    color=-1,
+                    alpha=-beta,
+                    beta=-alpha,
                 )
+                child_space = self._board_cache[move_hash]
+                child_space.move = move
+                if child_space not in state_space.children:
+                    state_space.children.append(child_space)
 
+                alpha = max(alpha, move_score)
+
+                print(f"move {move} for max has score {move_score:.2f}")
                 if move_score >= best_score:
                     best_score = move_score
                     best_move = move
                     best_board = move_board
+                    print(f"new best move {best_move} for max has score {best_score:.2f}")
                     yield best_move
 
                 if self.interrupt:
@@ -89,62 +110,98 @@ class Agent:
             depth += 1
             not self.interrupt and print(f"completed search at depth {depth}")
 
-        best_node = self._transposition_table[best_board]
-        best_children = sorted(best_node.children, key=lambda child: child.score, reverse=True)
-        best_followup = best_children[0].move
-        print(f"best response from {BoardCellState.next(player_unit)} is {best_followup} ({best_children[0].score:.2f}) out of {len(best_children)} move(s)")
-        print(", ".join([f"{child.move}: {child.score:.2f}" for child in best_children]))
+        node = self._board_cache[board]
+        line = []
+        is_max = True
+        while node.children:
+            num_children = len(node.children)
+            node = sorted(node.children, key=lambda child: child.score, reverse=not is_max)[0]
+            line.append((len(line), node.move, num_children))
+            is_max = not is_max
+        print(f"main line is {line}")
 
         self._num_prunes_total += self._num_prunes_last
         print(f"pruned {self._num_prunes_last} subtrees ({self._num_prunes_total / self._num_requests:.2f} avg)")
 
-    def _negamax(self, board, player_unit, depth, alpha, beta, color):
-        if board in self._transposition_table:
-            state_space = self._transposition_table[board]
+    def _negamax(self, board, board_hash, color, perspective, depth, alpha, beta):
+        if board_hash in self._board_cache:
+            state_space = self._board_cache[board_hash]
         else:
-            state_space = self._transposition_table[board] = StateSpace(board)
+            state_space = self._board_cache[board_hash] = StateSpace(board, hash=board_hash)
 
         if depth == 0:
-            terminal_score = self._heuristic(board, player_unit) * color
-            state_space.score = terminal_score
+            terminal_score = state_space.score = self._heuristic(board, color if perspective == 1 else BoardCellState.next(color))
             return terminal_score
 
-        unit = (player_unit
-            if color == 1
-            else BoardCellState.next(player_unit))
-        moves = self._enumerate_player_moves(board, unit)
-
-        # print(f"enumerate {len(moves)}")
-
         best_score = -inf
+        # if state_space.children:
+        #     for child in state_space.children:
+        #         if self.interrupt:
+        #             return best_score
+
+        #         move_score = -self._negamax(
+        #             board=child.board,
+        #             board_hash=child.hash,
+        #             color=color,
+        #             perspective=-perspective,
+        #             depth=depth - 1,
+        #             alpha=-beta,
+        #             beta=-alpha,
+        #         )
+        #         child_space = self._board_cache[child.hash]
+        #         child_space.score = move_score
+        #         if child_space not in state_space.children:
+        #             state_space.children.append(child_space)
+
+        #         best_score = state_space.score = max(best_score, move_score)
+        #         alpha = max(alpha, best_score)
+        #         if alpha >= beta:
+        #             self._num_prunes_last += 1
+        #             break
+        # else:
+
+        moves = self._enumerate_player_moves(
+            board,
+            player_unit=(color
+                if perspective == 1
+                else BoardCellState.next(color))
+        )
+        print(color if perspective == 1 else BoardCellState.next(color),
+            f"enumerate {len(moves)}",
+            "alpha", f"{alpha:.2f}",
+            "beta", f"{beta:.2f}",)
+
         for move in moves:
             if self.interrupt:
                 return best_score
 
             move_board = apply_move(board=deepcopy(board), move=move)
+            move_hash = update_hash(board_hash, board, move)
             move_score = -self._negamax(
                 board=move_board,
-                player_unit=player_unit,
+                board_hash=move_hash,
+                color=color,
+                perspective=-perspective,
                 depth=depth - 1,
                 alpha=-beta,
                 beta=-alpha,
-                color=-color,
             )
-            child_space = self._transposition_table[move_board]
-            child_space.score = move_score
+            child_space = self._board_cache[move_hash]
+            child_space.score = -move_score
             child_space.move = move
             if child_space not in state_space.children:
                 state_space.children.append(child_space)
-
-            # if unit == BoardCellState.WHITE:
-            #     if move_score > best_score:
-            #         print(f"new best move for {unit} is {move} with score {move_score:.2f}")
 
             best_score = state_space.score = max(best_score, move_score)
             alpha = max(alpha, best_score)
             if alpha >= beta:
                 self._num_prunes_last += 1
                 break
+
+        print(color if perspective == 1 else BoardCellState.next(color),
+            f"enumerate {sorted([(child_space.move, round(child_space.score * 100) / 100 if abs(child_space.score) != inf else child_space.score) for child_space in state_space.children], key=lambda node: node[1], reverse=True)}",
+            "alpha", f"{alpha:.2f}",
+            "beta", f"{beta:.2f}",)
 
         return best_score
 
@@ -168,7 +225,7 @@ class Agent:
         for selection_shape in selection_shapes:
             selection_shape = tuple(selection_shape)
             if len(selection_shape) == 1:
-                start, end = selection_shape[0], None
+                start = end = selection_shape[0]
             else:
                 start, end = selection_shape
             for direction in HexDirection:

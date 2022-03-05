@@ -11,7 +11,7 @@ class Move:
         return "->".join((
             "..".join((
                 str(self.start),
-                *([str(self.end)] if self.end else [])
+                *([str(self.end)] if self.end and self.end != self.start else [])
             )),
             *([self.direction.name] if self.direction else []),
         ))
@@ -34,7 +34,7 @@ class Move:
         if self.direction is None:
             return self.start or self.end
 
-        if self.start == self.end:
+        if self.end is None or self.start == self.end:
             return self.start
 
         disp = Hex.subtract(self.end, self.start)
