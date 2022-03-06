@@ -82,6 +82,12 @@ class App:
                     print("yield", best_move, done_search)
                     self._agent_queue.put((best_move, done_search))
 
+        print(f"start queue clear {self._agent_queue.qsize()}")
+        while self._agent_queue.qsize():
+            self._agent_queue.get()
+            self._agent_queue.task_done()
+        print(f"end queue clear {self._agent_queue.qsize()}")
+
         thread = Thread(target=worker)
         thread.daemon = True
         thread.start()
@@ -90,10 +96,6 @@ class App:
         self._agent_time = time()
         self._agent_move = None
         self._agent_done = False
-
-        while self._agent_queue.qsize():
-            self._agent_queue.get()
-            self._agent_queue.task_done()
 
         return thread
 
@@ -180,6 +182,9 @@ class App:
         if not self.game_over and not self._agent_done:
             self._display.update_timer(start_time=self._agent_time)
 
+        if self._display.is_animating or self._config.control_modes[self.game_turn.value] != ControlMode.CPU:
+            return
+
         if self._agent_done:
             best_move = self._agent_move
             is_search_complete = self._agent_done
@@ -187,21 +192,22 @@ class App:
             try:
                 best_move, is_search_complete = self._agent_queue.get_nowait()
                 self._agent_queue.task_done()
+                print("dequeue", best_move)
             except Empty:
                 best_move, is_search_complete = None, False
 
             if time() - self._agent_time >= AGENT_MAX_SEARCH_SECS + AGENT_SEC_THRESHOLD:
-                if self._agent_move:
-                    is_search_complete = True
-                    self._agent.interrupt = True
+                is_search_complete = True
+                self._agent.interrupt = True
+                print("send interrupt")
 
             self._agent_move = best_move or self._agent_move
             self._agent_done = is_search_complete
+            if is_search_complete:
+                print("agent queues", self._agent_move)
 
-        if self._display.is_animating:
-            return
-
-        if best_move and is_search_complete and self._config.control_modes[self.game_turn.value] == ControlMode.CPU:
+        if best_move and is_search_complete:
+            print("perform", best_move)
             self._agent_move = None
             self._perform_move(best_move)
 
