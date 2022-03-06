@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from core.hex import Hex, HexDirection
+from config import BOARD_MAXCOLS
 
 @dataclass
 class Move:
@@ -15,6 +16,11 @@ class Move:
             )),
             *([self.direction.name] if self.direction else []),
         ))
+
+    def __hash__(self):
+        return (hash(self.start)
+             + hash(self.end) * pow(BOARD_MAXCOLS, 2)
+             + list(HexDirection).index(self.direction) * pow(BOARD_MAXCOLS, 3))
 
     def head(self):
         if self.direction is None:
