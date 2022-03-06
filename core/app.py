@@ -196,7 +196,8 @@ class App:
             except Empty:
                 best_move, is_search_complete = None, False
 
-            if time() - self._agent_time >= AGENT_MAX_SEARCH_SECS + AGENT_SEC_THRESHOLD:
+            if (not self._agent.interrupt
+            and time() - self._agent_time >= AGENT_MAX_SEARCH_SECS + AGENT_SEC_THRESHOLD):
                 self._agent.interrupt = True
                 print("send interrupt")
 
