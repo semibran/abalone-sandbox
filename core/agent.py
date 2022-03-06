@@ -146,34 +146,30 @@ class Agent:
         self._num_requests += 1
 
         board_hash = hash_board(board)
-        if board_hash in self._board_cache:
-            state_space = self._board_cache[board_hash]
-        else:
-            state_space = self._board_cache[board_hash] = StateSpace(board, hash=board_hash, turn=player_unit)
+        # if board_hash in self._board_cache:
+        #     state_space = self._board_cache[board_hash]
+        # else:
+        state_space = self._board_cache[board_hash] = StateSpace(board, hash=board_hash, turn=player_unit)
 
         print(f"\ncurrent board has heuristic {heuristic(board, player_unit):.2f}")
 
-        best_score = -inf
         best_move = None
         depth = 1
         self.interrupt = False
         while not self.interrupt:
             alpha = -inf
+            print(f"init search at depth {depth}")
             if state_space.children:
-                print("using cached subtree")
                 children = [*state_space.children.items()]
-                children.sort(key=lambda item: item[1].score, reverse=True)
+                children.sort(key=lambda item: item[1].score + (item[0] == best_move), reverse=True)
+                print(f"using cached subtree({len(children)}) -> {dict([(f'{item[0]}', f'{item[1].score:.2f}') for item in children])}")
                 for move, child in children:
                     # print(f"search cached subtree {move}")
                     move_score = self._expand_state_space(child, player_unit, depth - 1, alpha=alpha, beta=inf)
                     if move_score > alpha:
-                        print(f"set new alpha based on {move} with score {move_score:.2f}")
-
-                    alpha = max(alpha, move_score)
-                    if move_score > best_score:
-                        best_score = move_score
+                        alpha = move_score
                         best_move = move
-                        print(f"new best move for max has score {best_score:.2f}")
+                        print(f"new best move for max({best_move}) has score {alpha:.2f}")
                         yield best_move
 
                     if self.interrupt:
@@ -181,6 +177,7 @@ class Agent:
             else:
                 moves = enumerate_player_moves(board, player_unit)
                 moves.sort(key=lambda move: estimate_move_score(board, move), reverse=True)
+                # print(f"expanding subtree({len(moves)})")
                 for move in moves:
                     # print(f"search new subtree {move}")
                     move_hash = update_hash(board_hash, board, move)
@@ -200,19 +197,15 @@ class Agent:
 
                     move_score = self._expand_state_space(child, player_unit, depth - 1, alpha=alpha, beta=inf)
                     if move_score > alpha:
-                        print(f"set new alpha based on {move} with score {move_score:.2f}")
-
-                    alpha = max(alpha, move_score)
-                    if move_score > best_score:
-                        best_score = move_score
+                        alpha = move_score
                         best_move = move
-                        print(f"new best move for max has score {best_score:.2f}")
+                        print(f"new best move for max has score({best_move}) {alpha:.2f}")
                         yield best_move
 
                     if self.interrupt:
                         break
 
-            not self.interrupt and print("complete search at depth", depth)
+            not self.interrupt and print(f"complete search at depth {depth} with best move {best_move}")
             depth += 1
 
         best_node = state_space
@@ -232,10 +225,10 @@ class Agent:
     def _expand_state_space(self, state_space, perspective, depth, alpha, beta):
         is_max = perspective == state_space.turn
         if depth == 0:
-            if is_max:
-                score = heuristic(state_space.board, perspective)
-            else:
-                score = -heuristic(state_space.board, BoardCellState.next(perspective))
+            score = heuristic(state_space.board, perspective)
+            # if is_max:
+            # else:
+            #     score = -heuristic(state_space.board, BoardCellState.next(perspective))
             state_space.score = score
             return score
 
@@ -275,7 +268,7 @@ class Agent:
                 # check if there's a way to resume the search at this move
                 print(f"discard tree({len(state_space.children)}) at inverse depth {depth}")
                 state_space.children.clear()
-                return -inf if is_max else inf
+                return inf if is_max else -inf
 
             move_hash = update_hash(state_space.hash, state_space.board, move)
             next_turn = BoardCellState.next(state_space.turn)
