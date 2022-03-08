@@ -172,7 +172,7 @@ class Agent:
         self._num_requests += 1
 
         board_hash = hash_board(board)
-        if board_hash in self._board_cache:
+        if board_hash in self._board_cache and self._board_cache[board_hash].turn == player_unit:
             state_space = self._board_cache[board_hash]
         else:
             state_space = self._board_cache[board_hash] = StateSpace(board, hash=board_hash, turn=player_unit)
