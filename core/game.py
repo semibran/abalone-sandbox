@@ -38,8 +38,8 @@ def is_move_legal(board, move):
     or board[move.head()] == BoardCellState.EMPTY):
         return False
 
-    num_attackers = len(move.pieces())
-    num_defenders = count_marbles_in_line(board, target_cell, move.direction)
+    num_attackers = min(3, len(move.pieces()))
+    num_defenders = min(3, count_marbles_in_line(board, target_cell, move.direction))
     return move.is_inline() and num_attackers > num_defenders
 
 def is_move_target_empty(board, move):

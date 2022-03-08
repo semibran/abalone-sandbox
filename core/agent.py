@@ -7,6 +7,7 @@ from core.board import Board
 from core.board_cell_state import BoardCellState
 from core.board_hasher import hash_board, update_hash
 from core.game import apply_move, is_move_legal, find_board_score
+from config import NUM_EJECTED_MARBLES_TO_WIN
 
 def heuristic(board, player_unit):
     max_score = heuristic_total(board, player_unit)
@@ -21,7 +22,10 @@ def heuristic_total(board, player_unit):
     )
 
 def heuristic_score(board, player_unit):
-    return find_board_score(board, player_unit)
+    score = find_board_score(board, player_unit)
+    # if score >= NUM_EJECTED_MARBLES_TO_WIN:
+        # return inf
+    return score
 
 def heuristic_centralization(board, player_unit):
     score = 0
@@ -89,6 +93,26 @@ def estimate_move_score(board, move):
     return (len(move.pieces())
         + WEIGHT_SUMITO * (board[move.target_cell()] != BoardCellState.EMPTY))
 
+
+def _traverse_main_line(state_space):
+    best_node = state_space
+    best_line = []
+    best_children = []
+    is_max = True
+    while best_node.children:
+        num_children = len(best_node.children)
+        child = sorted(best_node.children.items(), key=lambda child: child[1].score, reverse=is_max)[0]
+        best_move, best_node = child
+        best_line.append((len(best_line), best_move, f"{best_node.score:.2f}", num_children))
+        is_max = not is_max
+
+        if best_node not in best_children:
+            best_children.append(best_node)
+        else:
+            print("cycle!")
+            break
+
+    return best_line
 
 @dataclass
 class StateSpace:
@@ -178,7 +202,7 @@ class Agent:
                         break
             else:
                 moves = enumerate_player_moves(board, player_unit)
-                moves.sort(key=lambda move: estimate_move_score(board, move), reverse=True)
+                # moves.sort(key=lambda move: estimate_move_score(board, move), reverse=True)
                 # print(f"expanding subtree({len(moves)})")
                 for move in moves:
                     # print(f"search new subtree {move}")
@@ -210,15 +234,7 @@ class Agent:
             not self.interrupt and print(f"complete search at depth {depth} with best move {best_move}")
             depth += 1
 
-        best_node = state_space
-        best_line = []
-        is_max = True
-        while best_node.children:
-            num_children = len(best_node.children)
-            child = sorted(best_node.children.items(), key=lambda child: child[1].score, reverse=is_max)[0]
-            best_move, best_node = child
-            best_line.append((len(best_line), best_move, f"{best_node.score:.2f}", num_children))
-            is_max = not is_max
+        best_line = _traverse_main_line(state_space)
         print(f"main line is {best_line}")
 
         self._num_prunes_total += self._num_prunes_last
@@ -235,79 +251,80 @@ class Agent:
             return score
 
         best_score = -inf if is_max else inf
-        if state_space.children and is_max:
-            children = [*state_space.children.items()]
-            children.sort(key=lambda item: item[1].score, reverse=is_max)
-            # print(f"using cached {len(children)}-size subtree for {state_space.turn.name} at inverse depth {depth}")
-            for move, child in children:
-                if self.interrupt:
-                    print(f"receive interrupt at inverse depth {depth}")
-                    return None # inf if is_max else -inf # best_score
+        # if state_space.children and is_max:
+        #     children = [*state_space.children.items()]
+        #     # children.sort(key=lambda item: item[1].score, reverse=is_max)
+        #     # print(f"using cached {len(children)}-size subtree for {state_space.turn.name} at inverse depth {depth}")
+        #     for move, child in children:
+        #         if self.interrupt:
+        #             print(f"receive interrupt at inverse depth {depth}")
+        #             return None # inf if is_max else -inf # best_score
 
-                # print("expand", state_space.turn.name, move)
-                move_score = self._expand_state_space(child, perspective, depth - 1, alpha, beta)
-                if move_score is None:
-                    continue
-                # print(state_space.turn.name, move, f"{move_score:.2f}", f"{alpha:.2f}", f"{beta:.2f}")
+        #         # print("expand", state_space.turn.name, move)
+        #         move_score = self._expand_state_space(child, perspective, depth - 1, alpha, beta)
+        #         if move_score is None:
+        #             continue
+        #         # print(state_space.turn.name, move, f"{move_score:.2f}", f"{alpha:.2f}", f"{beta:.2f}")
 
-                if is_max:
-                    best_score = max(best_score, move_score)
-                    if best_score > beta:
-                        self._num_prunes_last += 1
-                        break
-                    alpha = max(alpha, move_score)
-                else:
-                    best_score = min(best_score, move_score)
-                    if best_score < alpha:
-                        print(f"alpha cutoff {move}({children.index(next(((m, c) for m, c in children if m == move), None))}): {best_score:.2f} <= {alpha:.2f}")
-                        self._num_prunes_last += 1
-                        break
-                    beta = min(beta, move_score)
-        else:
-            moves = enumerate_player_moves(state_space.board, state_space.turn)
-            moves.sort(key=lambda move: estimate_move_score(state_space.board, move), reverse=True)
-            # print(f"expanding new {len(moves)}-size subtree for {state_space.turn.name} at inverse depth {depth}")
-            for move in moves:
-                if self.interrupt:
-                    # search at this level is incomplete -- either discard or
-                    # check if there's a way to resume the search at this move
-                    print(f"discard tree({len(state_space.children)}) at inverse depth {depth}")
-                    state_space.children.clear()
-                    return None
+        #         if is_max:
+        #             best_score = max(best_score, move_score)
+        #             if best_score > beta:
+        #                 self._num_prunes_last += 1
+        #                 break
+        #             alpha = max(alpha, move_score)
+        #         else:
+        #             best_score = min(best_score, move_score)
+        #             if best_score < alpha:
+        #                 print(f"alpha cutoff {move}({children.index(next(((m, c) for m, c in children if m == move), None))}): {best_score:.2f} <= {alpha:.2f}")
+        #                 self._num_prunes_last += 1
+        #                 break
+        #             beta = min(beta, move_score)
+        # else:
+        moves = enumerate_player_moves(state_space.board, state_space.turn)
+        moves.sort(key=lambda move: estimate_move_score(state_space.board, move), reverse=True)
+        # print(f"expanding new {len(moves)}-size subtree for {state_space.turn.name} at inverse depth {depth}")
+        for move in moves:
+            if self.interrupt:
+                # search at this level is incomplete -- either discard or
+                # check if there's a way to resume the search at this move
+                print(f"discard tree({len(state_space.children)}) at inverse depth {depth}")
+                state_space.children.clear()
+                return None
 
-                move_hash = update_hash(state_space.hash, state_space.board, move)
-                next_turn = BoardCellState.next(state_space.turn)
-                if move_hash in self._board_cache and self._board_cache[move_hash].turn == next_turn:
-                    child = self._board_cache[move_hash]
-                else:
-                    move_board = apply_move(deepcopy(state_space.board), move)
-                    child = self._board_cache[move_hash] = StateSpace(
-                        board=move_board,
-                        hash=move_hash,
-                        turn=next_turn,
-                    )
+            move_hash = update_hash(state_space.hash, state_space.board, move)
+            next_turn = BoardCellState.next(state_space.turn)
+            if move_hash in self._board_cache and self._board_cache[move_hash].turn == next_turn:
+                child = self._board_cache[move_hash]
+            else:
+                move_board = apply_move(deepcopy(state_space.board), move)
+                child = self._board_cache[move_hash] = StateSpace(
+                    board=move_board,
+                    hash=move_hash,
+                    turn=next_turn,
+                )
 
-                if move not in state_space.children:
-                    state_space.children[move] = child
+            if move not in state_space.children:
+                state_space.children[move] = child
 
-                move_score = self._expand_state_space(child, perspective, depth - 1, alpha, beta)
-                if move_score is None:
-                    continue
-                # print(state_space.turn.name, move, f"{move_score:.2f}", f"{alpha:.2f}", f"{beta:.2f}")
+            print("expand", state_space.turn.name, move)
+            move_score = self._expand_state_space(child, perspective, depth - 1, alpha, beta)
+            if move_score is None:
+                continue
+            print(state_space.turn.name, move, f"{move_score:.2f}", f"{alpha:.2f}", f"{beta:.2f}")
 
-                if is_max:
-                    best_score = max(best_score, move_score)
-                    if best_score > beta:
-                        self._num_prunes_last += len(moves) - moves.index(move) - 1
-                        break
-                    alpha = max(alpha, move_score)
-                else:
-                    best_score = min(best_score, move_score)
-                    if best_score < alpha:
-                        # print(f"alpha cutoff {move}({moves.index(move)}): {best_score:.2f} <= {alpha:.2f}")
-                        self._num_prunes_last += len(moves) - moves.index(move) - 1
-                        break
-                    beta = min(beta, move_score)
+            if is_max:
+                best_score = max(best_score, move_score)
+                if best_score > beta:
+                    self._num_prunes_last += len(moves) - moves.index(move) - 1
+                    break
+                alpha = max(alpha, move_score)
+            else:
+                best_score = min(best_score, move_score)
+                if best_score < alpha:
+                    # print(f"alpha cutoff {move}({moves.index(move)}): {best_score:.2f} <= {alpha:.2f}")
+                    self._num_prunes_last += len(moves) - moves.index(move) - 1
+                    break
+                beta = min(beta, move_score)
 
         state_space.score = best_score
         return best_score
