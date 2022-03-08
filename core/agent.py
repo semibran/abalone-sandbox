@@ -185,8 +185,8 @@ class Agent:
         while not self.interrupt:
             alpha = -inf
             print(f"init search at depth {depth}")
-            has_legal_child_move = next((m for m, _ in state_space.children.items() if is_move_legal(board, m)), False)
-            if state_space.children and has_legal_child_move:
+            legal_child_moves = [m for m, _ in state_space.children.items() if is_move_legal(board, m)]
+            if state_space.children and len(legal_child_moves) >= 2:
                 children = [*state_space.children.items()]
                 children.sort(key=lambda item: item[1].score + (item[0] == best_move), reverse=True)
                 print(f"using cached subtree({len(children)}) -> {dict([(f'{item[0]}', f'{item[1].score:.2f}') for item in children])}")
