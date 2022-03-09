@@ -1,5 +1,6 @@
 from math import pow, inf
 from copy import deepcopy
+from enum import Enum, auto
 from dataclasses import dataclass, field
 from core.hex import Hex, HexDirection
 from core.move import Move
@@ -114,14 +115,18 @@ def _traverse_main_line(state_space):
 
     return best_line
 
+
 @dataclass
-class StateSpace:
-    board: Board
-    hash: int
-    turn: BoardCellState
-    score: float = None
-    children: dict = field(default_factory=dict)
-    stale: bool = False
+class TranspositionTableEntry:
+
+    class Type(Enum):
+        PV = auto()
+        CUT = auto()
+        ALL = auto()
+
+    score: float
+    depth: int
+    type: Type = None
 
 @dataclass
 class TranspositionTable:
@@ -196,10 +201,21 @@ class Agent:
                 yield best_move
 
     def _negamax(self, board, perspective, depth, alpha, beta, color):
+        board_hash = hash_board(board)
+        if board_hash in self._board_cache and self._board_cache[board_hash].depth >= depth:
+            cached_entry = self._board_cache[board_hash]
+            if cached_entry.type == TranspositionTableEntry.Type.PV:
+                return cached_entry.score
+            elif cached_entry.type == TranspositionTableEntry.Type.CUT:
+                alpha = max(alpha, cached_entry.score)
+            elif cached_entry.type == TranspositionTableEntry.Type.ALL:
+                beta = min(beta, cached_entry.score)
+
         if depth == 0:
             return heuristic(board, perspective) * color
 
         best_score = -inf
+        alpha_old = alpha
         player_unit = perspective if color == 1 else BoardCellState.next(perspective)
         moves = enumerate_player_moves(board, player_unit)
         for move in moves:
@@ -209,6 +225,23 @@ class Agent:
             if alpha >= beta:
                 break
             alpha = max(alpha, best_score)
+
+        cached_entry = (self._board_cache[board_hash]
+            if board_hash in self._board_cache
+            else TranspositionTableEntry(
+                score=best_score,
+                depth=depth,
+            ))
+
+        if board_hash not in self._board_cache:
+            self._board_cache[board_hash] = cached_entry
+
+        if best_score <= alpha_old:
+            cached_entry.type = TranspositionTableEntry.Type.ALL
+        elif best_score >= beta:
+            cached_entry.type = TranspositionTableEntry.Type.CUT
+        else:
+            cached_entry.type = TranspositionTableEntry.Type.PV
 
         return best_score
 

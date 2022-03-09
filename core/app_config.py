@@ -14,4 +14,4 @@ class AppConfig:
     control_modes: tuple[ControlMode, ControlMode] = (ControlMode.HUMAN, ControlMode.CPU)
     move_limits: tuple[int, int] = (50, 50)
     time_limits: tuple[int, int] = (5, 5)
-    theme: dict = field(default_factory=lambda: themes.THEME_DARK)
+    theme: dict = field(default_factory=lambda: themes.THEME_DEFAULT)
