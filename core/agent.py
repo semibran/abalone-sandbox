@@ -175,8 +175,17 @@ class Agent:
         self._interrupted = True
 
     def gen_best_move(self, board, player_unit):
-        depth = 2
         moves = enumerate_player_moves(board, player_unit)
+
+        if not self._should_use_lookaheads(board, player_unit):
+            moves.sort(
+                key=lambda move: heuristic(apply_move(deepcopy(board), move), player_unit),
+                reverse=True
+            )
+            yield moves[0] if moves else None
+            return
+
+        depth = 2
         alpha = -inf
         for move in moves:
             move_board = apply_move(deepcopy(board), move)
@@ -202,99 +211,6 @@ class Agent:
             alpha = max(alpha, best_score)
 
         return best_score
-
-    def _expand_state_space(self, state_space, perspective, depth, alpha, beta):
-        is_max = perspective == state_space.turn
-        if depth == 0:
-            score = heuristic(state_space.board, perspective)
-            # if is_max:
-            # else:
-            #     score = -heuristic(state_space.board, BoardCellState.next(perspective))
-            state_space.score = score
-            return score
-
-        best_score = -inf if is_max else inf
-        if state_space.children and is_max:
-            children = [*state_space.children.items()]
-            children.sort(key=lambda item: item[1].score, reverse=is_max)
-            # print(f"using cached {len(children)}-size subtree for {state_space.turn.name} at inverse depth {depth}")
-            for move, child in children:
-                if self._interrupted:
-                    print(f"receive interrupt at inverse depth {depth}")
-                    return None # inf if is_max else -inf # best_score
-
-                if not is_move_legal(state_space.board, move):
-                    # move was formerly legal, but board state has since changed
-                    continue
-
-                # print("expand", state_space.turn.name, move)
-                move_score = self._expand_state_space(child, perspective, depth - 1, alpha, beta)
-                if move_score is None:
-                    continue
-                # print(state_space.turn.name, move, f"{move_score:.2f}", f"{alpha:.2f}", f"{beta:.2f}")
-
-                if is_max:
-                    best_score = max(best_score, move_score)
-                    if best_score > beta:
-                        self._num_prunes_last += 1
-                        break
-                    alpha = max(alpha, move_score)
-                else:
-                    best_score = min(best_score, move_score)
-                    if best_score < alpha:
-                        print(f"alpha cutoff {move}({children.index(next(((m, c) for m, c in children if m == move), None))}): {best_score:.2f} <= {alpha:.2f}")
-                        self._num_prunes_last += 1
-                        break
-                    beta = min(beta, move_score)
-        else:
-            moves = enumerate_player_moves(state_space.board, state_space.turn)
-            moves.sort(key=lambda move: estimate_move_score(state_space.board, move), reverse=True)
-            # print(f"expanding new {len(moves)}-size subtree for {state_space.turn.name} at inverse depth {depth}")
-            for move in moves:
-                if self._interrupted:
-                    # search at this level is incomplete -- either discard or
-                    # check if there's a way to resume the search at this move
-                    print(f"discard tree({len(state_space.children)}) at inverse depth {depth}")
-                    state_space.children.clear()
-                    return None
-
-                move_hash = update_hash(state_space.hash, state_space.board, move)
-                next_turn = BoardCellState.next(state_space.turn)
-                if move_hash in self._board_cache and self._board_cache[move_hash].turn == next_turn:
-                    child = self._board_cache[move_hash]
-                else:
-                    move_board = apply_move(deepcopy(state_space.board), move)
-                    child = self._board_cache[move_hash] = StateSpace(
-                        board=move_board,
-                        hash=move_hash,
-                        turn=next_turn,
-                    )
-
-                if move not in state_space.children:
-                    state_space.children[move] = child
-
-                # print("expand", state_space.turn.name, move)
-                move_score = self._expand_state_space(child, perspective, depth - 1, alpha, beta)
-                if move_score is None:
-                    continue
-                # print(state_space.turn.name, move, f"{move_score:.2f}", f"{alpha:.2f}", f"{beta:.2f}")
-
-                if is_max:
-                    best_score = max(best_score, move_score)
-                    if best_score > beta:
-                        self._num_prunes_last += len(moves) - moves.index(move) - 1
-                        break
-                    alpha = max(alpha, move_score)
-                else:
-                    best_score = min(best_score, move_score)
-                    if best_score < alpha:
-                        # print(f"alpha cutoff {move}({moves.index(move)}): {best_score:.2f} <= {alpha:.2f}")
-                        self._num_prunes_last += len(moves) - moves.index(move) - 1
-                        break
-                    beta = min(beta, move_score)
-
-            state_space.score = best_score
-            return best_score
 
     def _should_use_lookaheads(self, board, player_unit):
         num_adjacent_enemies = 0
