@@ -161,11 +161,18 @@ class TranspositionTable:
 class Agent:
 
     def __init__(self):
-        self.interrupt = False
+        self._interrupted = False
         self._num_requests = 0
         self._num_prunes_total = 0
         self._num_prunes_last = 0
         self._board_cache = TranspositionTable()
+
+    @property
+    def interrupted(self):
+        return self._interrupted
+
+    def interrupt(self):
+        self._interrupted = True
 
     def gen_best_move(self, board, player_unit):
         self._num_prunes_last = 0
@@ -181,8 +188,8 @@ class Agent:
 
         best_move = None
         depth = 1
-        self.interrupt = False
-        while not self.interrupt:
+        self._interrupted = False
+        while not self._interrupted:
             alpha = -inf
             print(f"init search at depth {depth}")
             legal_child_moves = [m for m, _ in state_space.children.items() if is_move_legal(board, m)]
@@ -203,7 +210,7 @@ class Agent:
                         print(f"new best move for max({best_move}) has score {alpha:.2f}")
                         yield best_move
 
-                    if self.interrupt:
+                    if self._interrupted:
                         break
             else:
                 moves = enumerate_player_moves(board, player_unit)
@@ -233,10 +240,10 @@ class Agent:
                         print(f"new best move for max has score({best_move}) {alpha:.2f}")
                         yield best_move
 
-                    if self.interrupt:
+                    if self._interrupted:
                         break
 
-            not self.interrupt and print(f"complete search at depth {depth} with best move {best_move}")
+            not self._interrupted and print(f"complete search at depth {depth} with best move {best_move}")
             depth += 1
 
         best_line = _traverse_main_line(state_space)
@@ -261,7 +268,7 @@ class Agent:
             children.sort(key=lambda item: item[1].score, reverse=is_max)
             # print(f"using cached {len(children)}-size subtree for {state_space.turn.name} at inverse depth {depth}")
             for move, child in children:
-                if self.interrupt:
+                if self._interrupted:
                     print(f"receive interrupt at inverse depth {depth}")
                     return None # inf if is_max else -inf # best_score
 
@@ -293,7 +300,7 @@ class Agent:
             moves.sort(key=lambda move: estimate_move_score(state_space.board, move), reverse=True)
             # print(f"expanding new {len(moves)}-size subtree for {state_space.turn.name} at inverse depth {depth}")
             for move in moves:
-                if self.interrupt:
+                if self._interrupted:
                     # search at this level is incomplete -- either discard or
                     # check if there's a way to resume the search at this move
                     print(f"discard tree({len(state_space.children)}) at inverse depth {depth}")
