@@ -78,6 +78,7 @@ class App:
                 except StopIteration:
                     done_search = True
 
+                done_search |= self._agent.interrupted
                 if best_move or done_search:
                     print("yield", best_move, done_search)
                     self._agent_queue.put((best_move, done_search))
@@ -199,6 +200,7 @@ class App:
             if (not self._agent.interrupted
             and time() - self._agent_time >= AGENT_MAX_SEARCH_SECS + AGENT_SEC_THRESHOLD):
                 self._agent.interrupt()
+                is_search_complete = True
                 print("send interrupt")
 
             self._agent_move = best_move or self._agent_move

@@ -190,15 +190,24 @@ class Agent:
             yield moves[0] if moves else None
             return
 
-        depth = 2
-        alpha = -inf
-        for move in moves:
-            move_board = apply_move(deepcopy(board), move)
-            move_score = -self._negamax(move_board, player_unit, depth - 1, -inf, -alpha, -1)
-            if move_score > alpha:
-                alpha = move_score
-                best_move = move
-                yield best_move
+        depth = 1
+        self._interrupted = False
+        while not self._interrupted:
+            print(f"init search at depth {depth}")
+            alpha = -inf
+            for move in moves:
+                move_board = apply_move(deepcopy(board), move)
+                move_score = -self._negamax(move_board, player_unit, depth - 1, -inf, -alpha, -1)
+                if move_score > alpha:
+                    alpha = move_score
+                    best_move = move
+                    yield best_move
+
+                if self._interrupted:
+                    break
+
+            print(f"complete search at depth {depth}")
+            depth += 1
 
     def _negamax(self, board, perspective, depth, alpha, beta, color):
         board_hash = hash_board(board)
