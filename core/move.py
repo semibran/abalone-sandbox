@@ -1,12 +1,13 @@
-from dataclasses import dataclass
 from core.hex import Hex, HexDirection
 from config import BOARD_MAXCOLS
 
-@dataclass
 class Move:
-    start: Hex
-    end: Hex = None
-    direction: HexDirection = None
+
+    def __init__(self, start, end=None, direction=None):
+        self.direction = direction
+        self._start = start
+        self._end = end
+        self._pieces = ()
 
     def __repr__(self):
         return "->".join((
@@ -21,6 +22,24 @@ class Move:
         return (hash(self.start)
              + hash(self.end) * pow(BOARD_MAXCOLS, 2)
              + list(HexDirection).index(self.direction) * pow(BOARD_MAXCOLS, 3))
+
+    @property
+    def start(self):
+        return self._start
+
+    @start.setter
+    def start(self, start):
+        self._start = start
+        self._pieces = ()
+
+    @property
+    def end(self):
+        return self._end
+
+    @end.setter
+    def end(self, end):
+        self._end = end
+        self._pieces = ()
 
     def head(self):
         if self.direction is None:
@@ -51,17 +70,20 @@ class Move:
             return self.end
 
     def pieces(self):
-        if self.end is None or self.end == self.start:
-            return (self.start,)
+        if not self._pieces:
+            if self.end is None or self.end == self.start:
+                self._pieces = (self.start,)
+                return self._pieces
 
-        for direction in HexDirection:
-            pieces = [self.start]
-            for i in range(2):
-                pieces.append(Hex.add(pieces[-1], direction.value))
-                if pieces[-1] == self.end:
-                    return pieces
+            for direction in HexDirection:
+                pieces = [self.start]
+                for i in range(2):
+                    pieces.append(Hex.add(pieces[-1], direction.value))
+                    if pieces[-1] == self.end:
+                        self._pieces = tuple(pieces)
+                        return self._pieces
 
-        return ()
+        return self._pieces
 
     def targets(self):
         return [Hex.add(p, self.direction.value) for p in self.pieces()]
