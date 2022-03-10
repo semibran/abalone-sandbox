@@ -253,15 +253,16 @@ class Agent:
                 move_score = -self._inverse_search(move_board, move_hash, perspective, depth - 1, -beta, -alpha, -color)
             else:
                 move_score = -self._inverse_search(move_board, move_hash, perspective, depth - 1, -alpha - 1, -alpha, -color)
-                if alpha < move_score < beta:
+                if move_score > alpha or move_score < beta:
                     move_score = -self._inverse_search(move_board, move_hash, perspective, depth - 1, -beta, -move_score, -color)
 
-            best_score = max(best_score, move_score)
-            best_move = move
-            if alpha >= beta:
-                break
+            if move_score > best_score:
+                best_score = move_score
+                best_move = move
 
             alpha = max(alpha, best_score)
+            if alpha >= beta:
+                break
 
         cached_entry = (self._board_cache[board_hash]
             if board_hash in self._board_cache
