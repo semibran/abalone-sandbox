@@ -46,20 +46,29 @@ def update_hash(hash, board, move):
     """
 
     move_tail = move.tail()
-    hash ^= get_piece_mask(move_tail, board[move_tail])
+    move_cells = move.pieces()
+    move_targets = move.targets()
+    attacker_color = board[move_tail]
 
-    move_target = move.target_cell()
-    hash ^= get_piece_mask(move_target, board[move_tail])
+    for cell in move_cells:
+        hash ^= get_piece_mask(cell, attacker_color)
 
-    if board[move_target] != board[move_tail]:
-        defender_color = board[move_target]
-        hash ^= get_piece_mask(move_target, defender_color)
+    for target in move_targets:
+        hash ^= get_piece_mask(target, attacker_color)
 
-        push_target = move_target
-        while board[push_target] not in (None, BoardCellState.EMPTY):
-            push_target = Hex.add(push_target, move.direction.value)
+    move_dest = move.target_cell()
+    defender_color = board[move_dest]
 
-        if push_target in board:
-            hash ^= get_piece_mask(push_target, defender_color)
+    if defender_color != BoardCellState.EMPTY and move.is_inline():
+        hash ^= get_piece_mask(move_dest, defender_color)
+
+        push_dest = move_dest
+        push_content = defender_color
+        while push_content not in (None, BoardCellState.EMPTY):
+            push_dest = Hex.add(push_dest, move.direction.value)
+            push_content = board[push_dest]
+
+        if push_content is not None:
+            hash ^= get_piece_mask(push_dest, defender_color)
 
     return hash

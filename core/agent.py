@@ -204,7 +204,7 @@ class Agent:
             moves.sort(key=lambda move: move == best_move, reverse=True)
             for move in moves:
                 move_board = apply_move(deepcopy(board), move)
-                move_hash = update_hash(board_hash, move_board, move)
+                move_hash = update_hash(board_hash, board, move)
 
                 if move == moves[0]:
                     move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -inf, -alpha, -1)
@@ -247,7 +247,7 @@ class Agent:
         best_move and moves.sort(key=lambda move: move == best_move, reverse=True)
         for move in moves:
             move_board = apply_move(deepcopy(board), move)
-            move_hash = update_hash(board_hash, move_board, move)
+            move_hash = update_hash(board_hash, board, move)
 
             if move == moves[0]:
                 move_score = -self._inverse_search(move_board, move_hash, perspective, depth - 1, -beta, -alpha, -color)
