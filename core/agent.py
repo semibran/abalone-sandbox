@@ -195,6 +195,7 @@ class Agent:
 
         depth = 1
         best_move = None
+        board_hash = hash_board(board)
         time_start = time()
         self._interrupted = False
         while not self._interrupted:
@@ -203,13 +204,14 @@ class Agent:
             moves.sort(key=lambda move: move == best_move, reverse=True)
             for move in moves:
                 move_board = apply_move(deepcopy(board), move)
+                move_hash = update_hash(board_hash, move_board, move)
 
                 if move == moves[0]:
-                    move_score = -self._inverse_search(move_board, player_unit, depth - 1, -inf, -alpha, -1)
+                    move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -inf, -alpha, -1)
                 else:
-                    move_score = -self._inverse_search(move_board, player_unit, depth - 1, -alpha - 1, -alpha, -1)
+                    move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -alpha - 1, -alpha, -1)
                     if move_score > alpha:
-                        move_score = -self._inverse_search(move_board, player_unit, depth - 1, -inf, -move_score, -1)
+                        move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -inf, -move_score, -1)
 
                 if move_score > alpha:
                     alpha = move_score
@@ -222,8 +224,7 @@ class Agent:
             print(f"complete search at depth {depth} in {format_secs(time() - time_start)}")
             depth += 1
 
-    def _inverse_search(self, board, perspective, depth, alpha, beta, color):
-        board_hash = hash_board(board)
+    def _inverse_search(self, board, board_hash, perspective, depth, alpha, beta, color):
         if board_hash in self._board_cache and self._board_cache[board_hash].depth >= depth:
             cached_entry = self._board_cache[board_hash]
             if cached_entry.type == TranspositionTableEntry.Type.PV:
@@ -246,13 +247,14 @@ class Agent:
         best_move and moves.sort(key=lambda move: move == best_move, reverse=True)
         for move in moves:
             move_board = apply_move(deepcopy(board), move)
+            move_hash = update_hash(board_hash, move_board, move)
 
             if move == moves[0]:
-                move_score = -self._inverse_search(move_board, perspective, depth - 1, -beta, -alpha, -color)
+                move_score = -self._inverse_search(move_board, move_hash, perspective, depth - 1, -beta, -alpha, -color)
             else:
-                move_score = -self._inverse_search(move_board, perspective, depth - 1, -alpha - 1, -alpha, -color)
+                move_score = -self._inverse_search(move_board, move_hash, perspective, depth - 1, -alpha - 1, -alpha, -color)
                 if move_score > alpha:
-                    move_score = -self._inverse_search(move_board, perspective, depth - 1, -beta, -move_score, -color)
+                    move_score = -self._inverse_search(move_board, move_hash, perspective, depth - 1, -beta, -move_score, -color)
 
             best_score = max(best_score, move_score)
             best_move = move
