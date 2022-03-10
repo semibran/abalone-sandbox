@@ -126,6 +126,7 @@ class TranspositionTableEntry:
 
     score: float
     depth: int
+    move: Move = None
     type: Type = None
 
 @dataclass
@@ -191,13 +192,22 @@ class Agent:
             return
 
         depth = 1
+        best_move = None
         self._interrupted = False
         while not self._interrupted:
             print(f"init search at depth {depth}")
             alpha = -inf
+            moves.sort(key=lambda move: move == best_move, reverse=True)
             for move in moves:
                 move_board = apply_move(deepcopy(board), move)
-                move_score = -self._negamax(move_board, player_unit, depth - 1, -inf, -alpha, -1)
+
+                if move == moves[0]:
+                    move_score = -self._inverse_search(move_board, player_unit, depth - 1, -inf, -alpha, -1)
+                else:
+                    move_score = -self._inverse_search(move_board, player_unit, depth - 1, -alpha - 1, -alpha, -1)
+                    if move_score > alpha:
+                        move_score = -self._inverse_search(move_board, player_unit, depth - 1, -inf, -move_score, -1)
+
                 if move_score > alpha:
                     alpha = move_score
                     best_move = move
@@ -209,7 +219,7 @@ class Agent:
             print(f"complete search at depth {depth}")
             depth += 1
 
-    def _negamax(self, board, perspective, depth, alpha, beta, color):
+    def _inverse_search(self, board, perspective, depth, alpha, beta, color):
         board_hash = hash_board(board)
         if board_hash in self._board_cache and self._board_cache[board_hash].depth >= depth:
             cached_entry = self._board_cache[board_hash]
@@ -219,26 +229,40 @@ class Agent:
                 alpha = max(alpha, cached_entry.score)
             elif cached_entry.type == TranspositionTableEntry.Type.ALL:
                 beta = min(beta, cached_entry.score)
+        else:
+            cached_entry = None
 
         if depth == 0:
             return heuristic(board, perspective) * color
 
         best_score = -inf
+        best_move = cached_entry.move if cached_entry else None
         alpha_old = alpha
         player_unit = perspective if color == 1 else BoardCellState.next(perspective)
         moves = enumerate_player_moves(board, player_unit)
+        best_move and moves.sort(key=lambda move: move == best_move, reverse=True)
         for move in moves:
             move_board = apply_move(deepcopy(board), move)
-            move_score = -self._negamax(move_board, perspective, depth - 1, -beta, -alpha, -color)
+
+            if move == moves[0]:
+                move_score = -self._inverse_search(move_board, perspective, depth - 1, -beta, -alpha, -color)
+            else:
+                move_score = -self._inverse_search(move_board, perspective, depth - 1, -alpha - 1, -alpha, -color)
+                if move_score > alpha:
+                    move_score = -self._inverse_search(move_board, perspective, depth - 1, -beta, -move_score, -color)
+
             best_score = max(best_score, move_score)
+            best_move = move
             if alpha >= beta:
                 break
+
             alpha = max(alpha, best_score)
 
         cached_entry = (self._board_cache[board_hash]
             if board_hash in self._board_cache
             else TranspositionTableEntry(
                 score=best_score,
+                move=best_move,
                 depth=depth,
             ))
 
