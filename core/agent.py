@@ -1,7 +1,9 @@
 from math import pow, inf
 from copy import deepcopy
 from enum import Enum, auto
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from time import time
+from helpers.format_secs import format_secs
 from core.hex import Hex, HexDirection
 from core.move import Move
 from core.board import Board
@@ -193,6 +195,7 @@ class Agent:
 
         depth = 1
         best_move = None
+        time_start = time()
         self._interrupted = False
         while not self._interrupted:
             print(f"init search at depth {depth}")
@@ -216,7 +219,7 @@ class Agent:
                 if self._interrupted:
                     break
 
-            print(f"complete search at depth {depth}")
+            print(f"complete search at depth {depth} in {format_secs(time() - time_start)}")
             depth += 1
 
     def _inverse_search(self, board, perspective, depth, alpha, beta, color):
