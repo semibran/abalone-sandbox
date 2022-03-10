@@ -253,7 +253,7 @@ class Agent:
                 move_score = -self._inverse_search(move_board, move_hash, perspective, depth - 1, -beta, -alpha, -color)
             else:
                 move_score = -self._inverse_search(move_board, move_hash, perspective, depth - 1, -alpha - 1, -alpha, -color)
-                if move_score > alpha:
+                if alpha < move_score < beta:
                     move_score = -self._inverse_search(move_board, move_hash, perspective, depth - 1, -beta, -move_score, -color)
 
             best_score = max(best_score, move_score)
