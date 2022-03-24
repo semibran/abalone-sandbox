@@ -59,6 +59,7 @@ class Agent:
         return self._interrupted
 
     def interrupt(self):
+        print("call interrupt")
         self._interrupted = True
 
     def gen_best_move(self, board, player_unit):
@@ -112,6 +113,7 @@ class Agent:
 
     def _inverse_search(self, board, board_hash, perspective, depth, alpha, beta, color):
         if self._interrupted:
+            print("receive interrupt")
             raise TimerInterrupt()
 
         if board_hash in self._board_cache and self._board_cache[board_hash].depth >= depth:
@@ -141,6 +143,11 @@ class Agent:
         self._num_branches_enumerated += len(moves)
 
         for move in moves:
+            print(f"search {move} at depth {depth}")
+            if self._interrupted:
+                print("receive interrupt")
+                raise TimerInterrupt()
+
             move_board = apply_move(deepcopy(board), move)
             move_hash = update_hash(board_hash, board, move)
 

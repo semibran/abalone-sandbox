@@ -1,8 +1,36 @@
+from multiprocessing import Queue, Process
+from queue import Empty
 from time import time
 from core.agent import Agent
-from threading import Thread
-from queue import Queue, Empty
 from config import AGENT_MAX_SEARCH_SECS, AGENT_SEC_THRESHOLD
+
+
+SIGTERM = 0
+
+
+def worker(queue, agent, board, color):
+    best_move_gen = agent.gen_best_move(board, color)
+    best_move = None
+    done_search = False
+
+    while not done_search:
+        try:
+            signal = queue.get(block=False)
+        except Empty:
+            signal = None
+
+        if signal == SIGTERM:
+            agent.interrupt()
+
+        try:
+            best_move = next(best_move_gen)
+        except StopIteration:
+            done_search = True
+
+        if best_move or done_search:
+            print("yield", best_move, done_search)
+            queue.put((best_move, done_search))
+
 
 class AgentOperator:
 
@@ -22,38 +50,23 @@ class AgentOperator:
     def done(self):
         return self._done
 
-    def start_search(self, board, color):
-        if self._thread:
-            self._thread = None
-
-        best_move_gen = self._agent.gen_best_move(
-            board=board,
-            player_unit=color
-        )
-
-        def worker():
-            best_move = None
-            done_search = False
-            while not done_search:
-                try:
-                    best_move = next(best_move_gen)
-                except StopIteration:
-                    done_search = True
-
-                done_search |= self._agent.interrupted
-                if best_move or done_search:
-                    print("yield", best_move, done_search)
-                    self._queue.put((best_move, done_search))
-
+    def _clear_queue(self):
         while self._queue.qsize():
             self._queue.get()
             self._queue.task_done()
 
-        thread = Thread(target=worker)
+    def start_search(self, board, color):
+        if self._thread:
+            self._thread = None
+
+        queue = Queue()
+        self._queue = queue
+
+        thread = Process(target=worker, args=(queue, self._agent, board, color))
         thread.daemon = True
         thread.start()
-
         self._thread = thread
+
         self._time = time()
         self._move = None
         self._done = False
@@ -62,8 +75,7 @@ class AgentOperator:
 
     def stop_search(self):
         self._agent.interrupt()
-        self._move = None
-        self._done = False
+        self._thread.join()
 
     def update(self):
         if self._done:
@@ -71,17 +83,17 @@ class AgentOperator:
             is_search_complete = self._done
         else:
             try:
-                best_move, is_search_complete = self._queue.get_nowait()
-                self._queue.task_done()
+                best_move, is_search_complete = self._queue.get(block=False)
                 print("dequeue", best_move)
             except Empty:
                 best_move, is_search_complete = None, False
 
+            print(f"{time() - self._time}")
             if (not self._agent.interrupted
             and time() - self._time >= AGENT_MAX_SEARCH_SECS + AGENT_SEC_THRESHOLD):
-                self._agent.interrupt()
-                is_search_complete = True
                 print("send interrupt")
+                self._queue.put(SIGTERM)
+                is_search_complete = True
 
             self._move = best_move or self._move
             self._done = is_search_complete
