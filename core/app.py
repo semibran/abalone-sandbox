@@ -125,6 +125,11 @@ class App:
         if self._config.control_modes[self.game_turn.value] == ControlMode.CPU:
             self._setup_agent_thread()
 
+        # agent stuff
+        self._agent.interrupt()
+        self._agent_move = None
+        self._agent_done = False
+
     def _select_cell(self, cell):
         if self.game_over:
             self._new_game()
@@ -194,11 +199,6 @@ class App:
         ))
         self.game.perform_move(move)
         self._game_history.append(GameHistoryItem(move))
-
-        # agent stuff
-        self._agent.interrupt()
-        self._agent_move = None
-        self._agent_done = False
 
     def update(self):
         if self._display.is_settings_open:
