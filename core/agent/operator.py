@@ -29,7 +29,9 @@ AgentManager.register("Agent", Agent)
 class AgentOperator:
 
     def __init__(self):
-        self._agent = None
+        manager = AgentManager()
+        manager.start()
+        self._agent = manager.Agent()
         self._agent_manager = None
         self._queue = Queue()
         self._thread = None
@@ -57,12 +59,7 @@ class AgentOperator:
         queue = Queue()
         self._queue = queue
 
-        manager = AgentManager()
-        manager.start()
-        agent = manager.Agent()
-        self._agent = agent
-
-        thread = Process(target=worker, args=(queue, agent, board, color))
+        thread = Process(target=worker, args=(queue, self._agent, board, color))
         thread.daemon = True
         thread.start()
         self._thread = thread
