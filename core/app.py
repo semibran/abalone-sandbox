@@ -81,11 +81,12 @@ class App:
             game.perform_move(action.move)
             print(action.move)
         self.game = game
+
         self._display.clear_board()
         self._display.render(self)
+
         if self._config.control_modes[self.game_turn.value] == ControlMode.CPU:
             self._start_agent_search()
-
         self._stop_agent_search()
 
     def _select_cell(self, cell):

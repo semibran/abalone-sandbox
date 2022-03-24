@@ -1,41 +1,36 @@
 from multiprocessing import Queue, Process
+from multiprocessing.managers import BaseManager
 from queue import Empty
 from time import time
 from core.agent import Agent
 from config import AGENT_MAX_SEARCH_SECS, AGENT_SEC_THRESHOLD
 
 
-SIGTERM = 0
-
-
 def worker(queue, agent, board, color):
-    best_move_gen = agent.gen_best_move(board, color)
+    agent.start(board, color)
     best_move = None
+    next_best_move = None
     done_search = False
 
     while not done_search:
-        try:
-            signal = queue.get(block=False)
-        except Empty:
-            signal = None
-
-        if signal == SIGTERM:
-            agent.interrupt()
-
-        try:
-            best_move = next(best_move_gen)
-        except StopIteration:
-            done_search = True
-
+        next_best_move, done_search = agent.find_next_best_move()
+        best_move = next_best_move or best_move
         if best_move or done_search:
             print("yield", best_move, done_search)
             queue.put((best_move, done_search))
 
 
+class AgentManager(BaseManager):
+    pass
+
+AgentManager.register("Agent", Agent)
+
+
 class AgentOperator:
 
     def __init__(self):
-        self._agent = Agent()
+        self._agent = None
+        self._agent_manager = None
         self._queue = Queue()
         self._thread = None
         self._time = time()
@@ -62,7 +57,12 @@ class AgentOperator:
         queue = Queue()
         self._queue = queue
 
-        thread = Process(target=worker, args=(queue, self._agent, board, color))
+        manager = AgentManager()
+        manager.start()
+        agent = manager.Agent()
+        self._agent = agent
+
+        thread = Process(target=worker, args=(queue, agent, board, color))
         thread.daemon = True
         thread.start()
         self._thread = thread
@@ -88,11 +88,9 @@ class AgentOperator:
             except Empty:
                 best_move, is_search_complete = None, False
 
-            print(f"{time() - self._time}")
-            if (not self._agent.interrupted
-            and time() - self._time >= AGENT_MAX_SEARCH_SECS + AGENT_SEC_THRESHOLD):
+            if time() - self._time >= AGENT_MAX_SEARCH_SECS + AGENT_SEC_THRESHOLD:
                 print("send interrupt")
-                self._queue.put(SIGTERM)
+                self._agent.interrupt()
                 is_search_complete = True
 
             self._move = best_move or self._move

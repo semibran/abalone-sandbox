@@ -53,6 +53,7 @@ class Agent:
         self._num_branches_explored = 0
         self._num_branches_enumerated = 0
         self._board_cache = TranspositionTable()
+        self._best_move_gen = None
 
     @property
     def interrupted(self):
@@ -61,6 +62,18 @@ class Agent:
     def interrupt(self):
         print("call interrupt")
         self._interrupted = True
+
+    def start(self, board, color):
+        self._best_move_gen = self.gen_best_move(board, color)
+
+    def find_next_best_move(self):
+        try:
+            best_move = next(self._best_move_gen)
+            done_search = False
+        except StopIteration:
+            best_move = None
+            done_search = True
+        return best_move, done_search
 
     def gen_best_move(self, board, player_unit):
         moves = enumerate_player_moves(board, player_unit)
@@ -99,7 +112,7 @@ class Agent:
                         if move_score > alpha:
                             move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -inf, -move_score, -1)
                 except TimerInterrupt:
-                    break
+                    return
 
                 if move_score > alpha:
                     alpha = move_score
@@ -143,11 +156,6 @@ class Agent:
         self._num_branches_enumerated += len(moves)
 
         for move in moves:
-            print(f"search {move} at depth {depth}")
-            if self._interrupted:
-                print("receive interrupt")
-                raise TimerInterrupt()
-
             move_board = apply_move(deepcopy(board), move)
             move_hash = update_hash(board_hash, board, move)
 
