@@ -11,6 +11,10 @@ from core.board_hasher import hash_board, update_hash
 from core.game import apply_move
 
 
+class TimerInterrupt(Exception):
+    pass
+
+
 def estimate_move_score(board, move):
     WEIGHT_SUMITO = 10 # consider sumitos first
     return (len(move.pieces())
@@ -86,12 +90,15 @@ class Agent:
                 move_board = apply_move(deepcopy(board), move)
                 move_hash = update_hash(board_hash, board, move)
 
-                if move == moves[0]:
-                    move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -inf, -alpha, -1)
-                else:
-                    move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -alpha - 1, -alpha, -1)
-                    if move_score > alpha:
-                        move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -inf, -move_score, -1)
+                try:
+                    if move == moves[0]:
+                        move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -inf, -alpha, -1)
+                    else:
+                        move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -alpha - 1, -alpha, -1)
+                        if move_score > alpha:
+                            move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -inf, -move_score, -1)
+                except TimerInterrupt:
+                    break
 
                 if move_score > alpha:
                     alpha = move_score
@@ -99,14 +106,14 @@ class Agent:
                     yield best_move
                     print(f"average effective branching factor: {self._num_branches_explored / self._num_plies_expanded:.2f}/{self._num_branches_enumerated / self._num_plies_expanded:.2f}")
 
-                if self._interrupted:
-                    break
-
             print(f"complete search at depth {depth} in {format_secs(time() - time_start)}")
             depth += 1
 
 
     def _inverse_search(self, board, board_hash, perspective, depth, alpha, beta, color):
+        if self._interrupted:
+            raise TimerInterrupt()
+
         if board_hash in self._board_cache and self._board_cache[board_hash].depth >= depth:
             cached_entry = self._board_cache[board_hash]
             if cached_entry.type == TranspositionTable.EntryType.PV:
