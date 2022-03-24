@@ -1,6 +1,5 @@
 from time import time, sleep
-from threading import Thread
-from queue import Queue, Empty
+from core.agent.operator import AgentOperator as Agent
 from core.app_config import AppConfig, ControlMode
 from core.board_cell_state import BoardCellState
 from core.game import Game, Player, is_move_target_empty, count_marbles_in_line
@@ -8,10 +7,8 @@ from core.game_history import GameHistory, GameHistoryItem
 from core.move import Move
 from display import Display
 from core.hex import Hex, HexDirection
-from core.agent import Agent
 from config import (
     APP_NAME, FPS, ENABLED_FPS_DISPLAY,
-    AGENT_MAX_SEARCH_SECS, AGENT_SEC_THRESHOLD,
 )
 
 CPU_DELAY = 1
@@ -36,11 +33,6 @@ class App:
         self._config = AppConfig()
         self._display = Display(title=APP_NAME)
         self._agent = Agent()
-        self._agent_queue = Queue()
-        self._agent_thread = None
-        self._agent_time = time()
-        self._agent_move = None
-        self._agent_done = False
 
     @property
     def game_board(self):
@@ -62,45 +54,14 @@ class App:
     def theme(self):
         return self._config.theme
 
-    def _setup_agent_thread(self):
-        if self._agent_thread:
-            self._agent_thread = None
-
-        best_move_gen = self._agent.gen_best_move(
+    def _start_agent_search(self):
+        self._agent.start_search(
             board=self.game_board,
-            player_unit=self.PLAYER_MARBLES[self.game_turn]
+            color=self.PLAYER_MARBLES[self.game_turn]
         )
 
-        def worker():
-            best_move = None
-            done_search = False
-            while not done_search:
-                try:
-                    best_move = next(best_move_gen)
-                except StopIteration:
-                    done_search = True
-
-                done_search |= self._agent.interrupted
-                if best_move or done_search:
-                    print("yield", best_move, done_search)
-                    self._agent_queue.put((best_move, done_search))
-
-        print(f"start queue clear {self._agent_queue.qsize()}")
-        while self._agent_queue.qsize():
-            self._agent_queue.get()
-            self._agent_queue.task_done()
-        print(f"end queue clear {self._agent_queue.qsize()}")
-
-        thread = Thread(target=worker)
-        thread.daemon = True
-        thread.start()
-
-        self._agent_thread = thread
-        self._agent_time = time()
-        self._agent_move = None
-        self._agent_done = False
-
-        return thread
+    def _stop_agent_search(self):
+        self._agent.stop_search()
 
     def _new_game(self):
         self.selection = None
@@ -123,12 +84,9 @@ class App:
         self._display.clear_board()
         self._display.render(self)
         if self._config.control_modes[self.game_turn.value] == ControlMode.CPU:
-            self._setup_agent_thread()
+            self._start_agent_search()
 
-        # agent stuff
-        self._agent.interrupt()
-        self._agent_move = None
-        self._agent_done = False
+        self._stop_agent_search()
 
     def _select_cell(self, cell):
         if self.game_over:
@@ -191,50 +149,31 @@ class App:
     def _perform_move(self, move):
         if self.game_over:
             return
+
         self._display.perform_move(move, self.game_board, on_end=lambda: (
             self._display.update_hud(self),
             not self.game_over
             and self._config.control_modes[self.game_turn.value] == ControlMode.CPU
-                and self._setup_agent_thread()
+                and self._start_agent_search()
         ))
         self.game.perform_move(move)
         self._game_history.append(GameHistoryItem(move))
 
-    def update(self):
+    def _update(self):
         if self._display.is_settings_open:
             return
 
-        if not self.game_over and not self._agent_done:
-            self._display.update_timer(start_time=self._agent_time)
+        self._update_agent()
+
+    def _update_agent(self):
+        if not self.game_over and not self._agent.done:
+            self._display.update_timer(start_time=self._agent.time)
 
         if self._display.is_animating or self._config.control_modes[self.game_turn.value] != ControlMode.CPU:
             return
 
-        if self._agent_done:
-            best_move = self._agent_move
-            is_search_complete = self._agent_done
-        else:
-            try:
-                best_move, is_search_complete = self._agent_queue.get_nowait()
-                self._agent_queue.task_done()
-                print("dequeue", best_move)
-            except Empty:
-                best_move, is_search_complete = None, False
-
-            if (not self._agent.interrupted
-            and time() - self._agent_time >= AGENT_MAX_SEARCH_SECS + AGENT_SEC_THRESHOLD):
-                self._agent.interrupt()
-                is_search_complete = True
-                print("send interrupt")
-
-            self._agent_move = best_move or self._agent_move
-            self._agent_done = is_search_complete
-            if is_search_complete:
-                print("agent queues", self._agent_move)
-
-        if best_move and is_search_complete:
-            print("perform", best_move)
-            self._agent_move = None
+        best_move = self._agent.update()
+        if best_move:
             self._perform_move(best_move)
 
     def start(self):
@@ -261,10 +200,8 @@ class App:
         while not self._display.closed:
             start_time and ENABLED_FPS_DISPLAY and print(f"FPS: {1 / (time() - start_time):.2f}")
             start_time = time()
-            self.update()
+            self._update()
             self._display.update()
             if self._display.is_animating:
                 self._display.render(self)
             sleep(1 / FPS)
-
-        # self._agent_queue.join() # TODO: why does this block closing the app?
