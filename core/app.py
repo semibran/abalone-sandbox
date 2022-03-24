@@ -1,9 +1,10 @@
 from time import time, sleep
-from threading import Thread, active_count
+from threading import Thread
 from queue import Queue, Empty
 from core.app_config import AppConfig, ControlMode
 from core.board_cell_state import BoardCellState
 from core.game import Game, Player, is_move_target_empty, count_marbles_in_line
+from core.game_history import GameHistory, GameHistoryItem
 from core.move import Move
 from display import Display
 from core.hex import Hex, HexDirection
@@ -29,6 +30,7 @@ class App:
 
     def __init__(self):
         self.game = None
+        self._game_history = GameHistory()
         self.selection = None
         self._start_time = time()
         self._config = AppConfig()
@@ -107,6 +109,22 @@ class App:
         self._display.render(self)
         self._start_time = time()
 
+    def _undo_move(self):
+        if not self._game_history:
+            print("game history is empty")
+            return
+
+        game = Game(layout=self._config.starting_layout)
+        self._game_history.pop()
+        for action in self._game_history:
+            game.perform_move(action.move)
+            print(action.move)
+        self.game = game
+        self._display.clear_board()
+        self._display.render(self)
+        if self._config.control_modes[self.game_turn.value] == ControlMode.CPU:
+            self._setup_agent_thread()
+
     def _select_cell(self, cell):
         if self.game_over:
             self._new_game()
@@ -175,6 +193,12 @@ class App:
                 and self._setup_agent_thread()
         ))
         self.game.perform_move(move)
+        self._game_history.append(GameHistoryItem(move))
+
+        # agent stuff
+        self._agent.interrupt()
+        self._agent_move = None
+        self._agent_done = False
 
     def update(self):
         if self._display.is_settings_open:
@@ -220,6 +244,7 @@ class App:
                 (not self.game.ply or self._display.confirm_reset())
                     and self._new_game()
             ),
+            on_undo=self._undo_move,
             on_settings=lambda: (
                 (not self.game.ply or self._display.confirm_settings())
                     and self._display.open_settings(self._config, on_close=lambda config: (

@@ -108,6 +108,8 @@ class Game:
         if score >= NUM_EJECTED_MARBLES_TO_WIN:
             self.winner = self.turn
 
+        print(f"score for {player_unit}: {score}")
+
         self.turn = Player.next(self.turn)
         self.ply += 1
         return True

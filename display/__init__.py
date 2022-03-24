@@ -26,19 +26,22 @@ class Display:
     def closed(self):
         return self._closed
 
-    def open(self, on_click, on_reset, on_settings):
+    def open(self, on_click, on_reset, on_undo, on_settings):
         self._window = Tk()
         self._window.title(self._title)
         self._window.protocol("WM_DELETE_WINDOW", lambda: setattr(self, "_closed", True))
 
         header = Frame(self._window)
-        header.pack(fill="x", expand=True, ipady=8)
+        header.pack(fill="x", expand=True, ipady=4)
 
         reset_button = Button(header, text="Reset", command=on_reset)
-        reset_button.pack(anchor="w", side="left", padx=8)
+        reset_button.pack(anchor="w", side="left", padx=4)
+
+        undo_button = Button(header, text="Undo", command=on_undo)
+        undo_button.pack(anchor="w", side="left", padx=4)
 
         timer_label = Label(header, text="0")
-        timer_label.pack(anchor="w", side="left", padx=0)
+        timer_label.pack(anchor="w", side="left", padx=4)
         self._timer_label = timer_label
 
         settings_button = Button(header, text="Settings", command=on_settings)
@@ -79,5 +82,5 @@ class Display:
     def render(self, app):
         self._game_display.render(app)
 
-    def perform_move(self, move, board, on_end=None):
-        self._game_display.perform_move(move, board, on_end)
+    def perform_move(self, *args, **kwargs):
+        self._game_display.perform_move(*args, **kwargs)
