@@ -1,94 +1,14 @@
-from math import pow, inf
+from math import inf
 from copy import deepcopy
-from enum import Enum, auto
-from dataclasses import dataclass
 from time import time
 from helpers.format_secs import format_secs
-from core.hex import Hex, HexDirection
-from core.move import Move
-from core.board import Board
+from core.agent.heuristic import heuristic
+from core.agent.state_generator import enumerate_player_moves
+from core.agent.transposition_table import TranspositionTable
+from core.hex import Hex
 from core.board_cell_state import BoardCellState
 from core.board_hasher import hash_board, update_hash
-from core.game import apply_move, is_move_legal, find_board_score
-from config import NUM_EJECTED_MARBLES_TO_WIN
-
-def heuristic(board, player_unit):
-    max_score = heuristic_total(board, player_unit)
-    min_score = heuristic_total(board, BoardCellState.next(player_unit))
-    return max_score - min_score
-
-def heuristic_total(board, player_unit):
-    return (
-        (WEIGHT_SCORE := 50) * heuristic_score(board, player_unit)
-        + (WEIGHT_CENTRALIZATION := 1) * heuristic_centralization(board, player_unit)
-        + (WEIGHT_ADJACENCY := 0.1) * heuristic_adjacency(board, player_unit)
-    )
-
-def heuristic_score(board, player_unit):
-    score = find_board_score(board, player_unit)
-    if score >= NUM_EJECTED_MARBLES_TO_WIN:
-        return inf
-    return score
-
-def heuristic_centralization(board, player_unit):
-    score = 0
-    for cell, cell_state in board.enumerate():
-        if cell_state != player_unit:
-            continue
-        board_radius = board.height // 2
-        board_center = Hex(board_radius, board_radius)
-        score += (board_radius - Hex.manhattan(cell, board_center) - 1) * 2
-    return score
-
-def heuristic_adjacency(board, player_unit):
-    score = 0
-    for cell, cell_state in board.enumerate():
-        if cell_state != player_unit:
-            continue
-        num_allies = sum([board[n] == cell_state for n in Hex.neighbors(cell)])
-        score += pow(num_allies, 2)
-    return score
-
-
-def enumerate_player_moves(board, player_unit):
-    player_moves = []
-    selection_shapes = enumerate_selection_shapes(board, player_unit)
-    for selection_shape in selection_shapes:
-        selection_shape = tuple(selection_shape)
-        if len(selection_shape) == 1:
-            start = end = selection_shape[0]
-        else:
-            start, end = selection_shape
-        for direction in HexDirection:
-            move = Move(start, end, direction)
-            if is_move_legal(board, move):
-                player_moves.append(move)
-    return player_moves
-
-def enumerate_selection_shapes(board, player_unit):
-    selection_shapes = []
-    for cell, color in board.enumerate():
-        if color is not player_unit:
-            continue
-        cell_selection_shapes = enumerate_cell_selection_shapes(board, cell)
-        selection_shapes += [shape for shape in cell_selection_shapes if shape not in selection_shapes]
-    return selection_shapes
-
-def enumerate_cell_selection_shapes(board, origin):
-    selection_shapes = [{origin, origin}]
-    for direction in HexDirection:
-        origin_color = board[origin]
-        cell = origin
-        shape = [cell]
-        while len(shape) < 3:
-            cell = Hex.add(cell, direction.value)
-            if board[cell] != origin_color:
-                break
-            shape.append(cell)
-            if len(shape) > 1:
-                selection_shapes.append({shape[0], shape[-1]})
-
-    return selection_shapes
+from core.game import apply_move
 
 
 def estimate_move_score(board, move):
@@ -117,54 +37,6 @@ def _traverse_main_line(state_space):
 
     return best_line
 
-
-@dataclass
-class TranspositionTableEntry:
-
-    class Type(Enum):
-        PV = auto()
-        CUT = auto()
-        ALL = auto()
-
-    score: float
-    depth: int
-    move: Move = None
-    type: Type = None
-
-@dataclass
-class TranspositionTable:
-
-    def __init__(self):
-        self._table = {}
-        self._cache_hash = None, None
-
-    def _hash_board(self, board):
-        """
-        Uses the most recently calculated hash if existent.
-        """
-        cached_hash, cached_board = self._cache_hash
-        if board is cached_board:
-            hash = cached_hash
-        else:
-            hash = hash_board(board)
-            self._cache_hash = (hash, board)
-        return hash
-
-    def __contains__(self, hash):
-        # TODO: do we even want to input boards?
-        if type(hash) is Board:
-            hash = self._hash_board(hash)
-        return hash in self._table
-
-    def __getitem__(self, hash):
-        if type(hash) is Board:
-            hash = self._hash_board(hash)
-        return self._table[hash]
-
-    def __setitem__(self, hash, node):
-        if type(hash) is Board:
-            hash = self._hash_board(hash)
-        self._table[hash] = node
 
 class Agent:
 
@@ -237,11 +109,11 @@ class Agent:
     def _inverse_search(self, board, board_hash, perspective, depth, alpha, beta, color):
         if board_hash in self._board_cache and self._board_cache[board_hash].depth >= depth:
             cached_entry = self._board_cache[board_hash]
-            if cached_entry.type == TranspositionTableEntry.Type.PV:
+            if cached_entry.type == TranspositionTable.EntryType.PV:
                 return cached_entry.score
-            elif cached_entry.type == TranspositionTableEntry.Type.CUT:
+            elif cached_entry.type == TranspositionTable.EntryType.CUT:
                 alpha = max(alpha, cached_entry.score)
-            elif cached_entry.type == TranspositionTableEntry.Type.ALL:
+            elif cached_entry.type == TranspositionTable.EntryType.ALL:
                 beta = min(beta, cached_entry.score)
         else:
             cached_entry = None
@@ -285,7 +157,7 @@ class Agent:
 
         cached_entry = (self._board_cache[board_hash]
             if board_hash in self._board_cache
-            else TranspositionTableEntry(
+            else TranspositionTable.Entry(
                 score=best_score,
                 move=best_move,
                 depth=depth,
@@ -295,11 +167,11 @@ class Agent:
             self._board_cache[board_hash] = cached_entry
 
         if best_score <= alpha_old:
-            cached_entry.type = TranspositionTableEntry.Type.ALL
+            cached_entry.type = TranspositionTable.EntryType.ALL
         elif best_score >= beta:
-            cached_entry.type = TranspositionTableEntry.Type.CUT
+            cached_entry.type = TranspositionTable.EntryType.CUT
         else:
-            cached_entry.type = TranspositionTableEntry.Type.PV
+            cached_entry.type = TranspositionTable.EntryType.PV
 
         return best_score
 
