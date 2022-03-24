@@ -173,6 +173,9 @@ class Agent:
         self._num_requests = 0
         self._num_prunes_total = 0
         self._num_prunes_last = 0
+        self._num_plies_expanded = 0
+        self._num_branches_explored = 0
+        self._num_branches_enumerated = 0
         self._board_cache = TranspositionTable()
 
     @property
@@ -202,6 +205,11 @@ class Agent:
             print(f"init search at depth {depth}")
             alpha = -inf
             moves.sort(key=lambda move: move == best_move, reverse=True)
+
+            self._num_plies_expanded += 1
+            self._num_branches_explored += len(moves)
+            self._num_branches_enumerated += len(moves)
+
             for move in moves:
                 move_board = apply_move(deepcopy(board), move)
                 move_hash = update_hash(board_hash, board, move)
@@ -217,12 +225,14 @@ class Agent:
                     alpha = move_score
                     best_move = move
                     yield best_move
+                    print(f"average effective branching factor: {self._num_branches_explored / self._num_plies_expanded:.2f}/{self._num_branches_enumerated / self._num_plies_expanded:.2f}")
 
                 if self._interrupted:
                     break
 
             print(f"complete search at depth {depth} in {format_secs(time() - time_start)}")
             depth += 1
+
 
     def _inverse_search(self, board, board_hash, perspective, depth, alpha, beta, color):
         if board_hash in self._board_cache and self._board_cache[board_hash].depth >= depth:
@@ -244,7 +254,13 @@ class Agent:
         alpha_old = alpha
         player_unit = perspective if color == 1 else BoardCellState.next(perspective)
         moves = enumerate_player_moves(board, player_unit)
-        best_move and moves.sort(key=lambda move: move == best_move, reverse=True)
+        if best_move and best_move in moves:
+            moves.remove(best_move)
+            moves.insert(0, best_move)
+
+        self._num_plies_expanded += 1
+        self._num_branches_enumerated += len(moves)
+
         for move in moves:
             move_board = apply_move(deepcopy(board), move)
             move_hash = update_hash(board_hash, board, move)
@@ -262,7 +278,10 @@ class Agent:
 
             alpha = max(alpha, best_score)
             if alpha >= beta:
+                self._num_branches_explored += moves.index(move) + 1
                 break
+        else:
+            self._num_branches_explored += len(moves)
 
         cached_entry = (self._board_cache[board_hash]
             if board_hash in self._board_cache

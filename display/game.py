@@ -274,8 +274,9 @@ class GameDisplay:
                     on_end=lambda: self._delete_marble(marble)
                 ))
 
-        old_on_end = self._anims[-1].on_end
-        self._anims[-1].on_end = lambda: (
-            on_end and on_end(),
-            old_on_end and old_on_end()
-        )
+        if self._anims:
+            old_on_end = self._anims[-1].on_end
+            self._anims[-1].on_end = lambda: (
+                on_end and on_end(),
+                old_on_end and old_on_end()
+            )

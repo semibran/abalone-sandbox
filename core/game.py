@@ -5,7 +5,10 @@ from core.board_layout import BoardLayout
 from core.hex import Hex
 from config import NUM_EJECTED_MARBLES_TO_WIN
 
-def apply_move(board, move):
+def apply_move(board, move, validate=False):
+    if validate and not is_move_legal(board, move):
+        return
+
     unit = board[move.head()]
 
     for cell in move.pieces():
@@ -100,7 +103,7 @@ class Game:
             return False
 
         player_unit = self.board[move.head()]
-        apply_move(self.board, move)
+        apply_move(self.board, move, validate=True)
         score = find_board_score(self.board, player_unit)
         if score >= NUM_EJECTED_MARBLES_TO_WIN:
             self.winner = self.turn
