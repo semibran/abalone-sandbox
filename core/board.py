@@ -15,7 +15,8 @@ class Board:
     def __init__(self, layout=None):
         self._layout = layout
         self._data = generate_empty_board(size=BOARD_SIZE)
-        self._items = None
+        self.__items = None
+        self.__items_nonempty = None
 
     def __repr__(self):
         STATE_MAP = {
@@ -62,18 +63,32 @@ class Board:
             q, r = cell.astuple()
             q -= self.offset(r)
             self._data[r][q] = data
-            self._items = None
+            self.__items = None
+            self.__items_nonempty = None
 
     def enumerate(self):
-        if not self._items:
+        if not self.__items:
             items = []
             for r, line in enumerate(self._data):
                 for q, val in enumerate(line):
                     q += self.offset(r)
                     item = (Hex(q, r), val)
                     items.append(item)
-            self._items = items
-        return self._items
+            self.__items = items
+        return self.__items
+
+    def enumerate_nonempty(self):
+        if not self.__items_nonempty:
+            items = []
+            for r, line in enumerate(self._data):
+                for q, val in enumerate(line):
+                    if val == BoardCellState.EMPTY:
+                        continue
+                    q += self.offset(r)
+                    item = (Hex(q, r), val)
+                    items.append(item)
+            self.__items_nonempty = items
+        return self.__items_nonempty
 
     def fill(self, data):
         for cell, _ in self.enumerate():

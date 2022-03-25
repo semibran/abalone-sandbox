@@ -16,9 +16,9 @@ profiler = MeanProfiler()
 
 
 def heuristic(board, player_unit):
-    profiler.start()
+    # profiler.start()
     score = _heuristic_optimized(board, player_unit)
-    profiler.stop(label="avg heuristic speed")
+    # profiler.stop(label="avg heuristic speed")
     return score
 
 def _heuristic_optimized(board, color):
@@ -32,7 +32,7 @@ def _heuristic_optimized(board, color):
     heuristic_adjacency = 0
     heuristic_adjacency_opponent = 0
 
-    for cell, cell_color in board.enumerate():
+    for cell, cell_color in board.enumerate_nonempty():
         if cell_color == BoardCellState.EMPTY:
             continue
 
