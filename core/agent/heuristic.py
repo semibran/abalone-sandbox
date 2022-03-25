@@ -6,15 +6,15 @@ from config import NUM_EJECTED_MARBLES_TO_WIN
 
 
 def heuristic(board, player_unit):
-    max_score = _heuristic_total(board, player_unit)
-    min_score = _heuristic_total(board, BoardCellState.next(player_unit))
-    return max_score - min_score
+    return _heuristic_total(board, player_unit)
 
 def _heuristic_total(board, player_unit):
     return (
         (WEIGHT_SCORE := 50) * _heuristic_score(board, player_unit)
         + (WEIGHT_CENTRALIZATION := 1) * _heuristic_centralization(board, player_unit)
+        + (WEIGHT_CENTRALIZATION := 0.5) * -_heuristic_centralization(board, BoardCellState.next(player_unit))
         + (WEIGHT_ADJACENCY := 0.1) * _heuristic_adjacency(board, player_unit)
+        + (WEIGHT_CENTRALIZATION := 0.05) * -_heuristic_adjacency(board, BoardCellState.next(player_unit))
     )
 
 def _heuristic_score(board, player_unit):

@@ -15,7 +15,7 @@ class TimerInterrupt(Exception):
     pass
 
 
-def estimate_move_score(board, move):
+def _estimate_move_score(board, move):
     WEIGHT_SUMITO = 10 # consider sumitos first
     return (len(move.pieces())
         + WEIGHT_SUMITO * (board[move.target_cell()] != BoardCellState.EMPTY))
@@ -94,7 +94,11 @@ class Agent:
         while not self._interrupted:
             print(f"init search at depth {depth}")
             alpha = -inf
-            moves.sort(key=lambda move: move == best_move, reverse=True)
+            if best_move is None:
+                moves.sort(key=lambda move: _estimate_move_score(board, move))
+            elif best_move in moves:
+                moves.remove(best_move)
+                moves.insert(0, best_move)
 
             self._num_plies_expanded += 1
             self._num_branches_explored += len(moves)
