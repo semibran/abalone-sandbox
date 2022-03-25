@@ -21,26 +21,29 @@ def _estimate_move_score(board, move):
         + WEIGHT_SUMITO * (board[move.target_cell()] != BoardCellState.EMPTY))
 
 
-def _traverse_main_line(state_space):
-    best_node = state_space
-    best_line = []
-    best_children = []
-    is_max = True
-    while best_node.children:
-        num_children = len(best_node.children)
-        child = sorted(best_node.children.items(), key=lambda child: child[1].score, reverse=is_max)[0]
-        best_move, best_node = child
-        best_line.append((len(best_line), best_move, f"{best_node.score:.2f}", num_children))
-        is_max = not is_max
+def _find_main_line(board, move, transposition_table):
+    main_line = [move]
 
-        if best_node not in best_children:
-            best_children.append(best_node)
+    board = deepcopy(board)
+    apply_move(board, move)
+
+    board_hash = hash_board(board)
+    root = transposition_table[board_hash]
+    node = root
+
+    while node:
+        best_move = node.move
+        if best_move:
+            move_hash = update_hash(board_hash, board, best_move)
+            apply_move(board, best_move)
+            main_line.append((best_move, node.score, node.depth))
+            node = (transposition_table[move_hash]
+                if move_hash in transposition_table
+                else None)
         else:
-            print("cycle!")
-            break
+            node = None
 
-    return best_line
-
+    return main_line
 
 class Agent:
 
@@ -75,22 +78,34 @@ class Agent:
             done_search = True
         return best_move, done_search
 
-    def gen_best_move(self, board, player_unit):
-        moves = enumerate_player_moves(board, player_unit)
-
-        if not self._should_use_lookaheads(board, player_unit):
+    def gen_best_move(self, board, color):
+        if not self._should_use_lookaheads(board, color):
+            moves = enumerate_player_moves(board, color)
             moves.sort(
-                key=lambda move: heuristic(apply_move(deepcopy(board), move), player_unit),
+                key=lambda move: heuristic(apply_move(deepcopy(board), move), color),
                 reverse=True
             )
             yield moves[0] if moves else None
             return
 
+        self._interrupted = False
+        try:
+            search_gen = self._gen_search(board, color)
+            while True:
+                best_move = next(search_gen)
+                yield best_move
+        except (TimerInterrupt, StopIteration):
+            self._interrupted = True
+        # finally:
+        #     main_line = _find_main_line(board, best_move, transposition_table=self._board_cache)
+        #     print(main_line)
+
+    def _gen_search(self, board, color):
         depth = 1
         best_move = None
+        moves = enumerate_player_moves(board, color)
         board_hash = hash_board(board)
         time_start = time()
-        self._interrupted = False
         while not self._interrupted:
             print(f"init search at depth {depth}")
             alpha = -inf
@@ -107,16 +122,12 @@ class Agent:
             for move in moves:
                 move_board = apply_move(deepcopy(board), move)
                 move_hash = update_hash(board_hash, board, move)
-
-                try:
-                    if move == moves[0]:
-                        move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -inf, -alpha, -1)
-                    else:
-                        move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -alpha - 1, -alpha, -1)
-                        if move_score > alpha:
-                            move_score = -self._inverse_search(move_board, move_hash, player_unit, depth - 1, -inf, -move_score, -1)
-                except TimerInterrupt:
-                    return
+                if move == moves[0]:
+                    move_score = -self._inverse_search(move_board, move_hash, color, depth - 1, -inf, -alpha, -1)
+                else:
+                    move_score = -self._inverse_search(move_board, move_hash, color, depth - 1, -alpha - 1, -alpha, -1)
+                    if move_score > alpha:
+                        move_score = -self._inverse_search(move_board, move_hash, color, depth - 1, -inf, -move_score, -1)
 
                 if move_score > alpha:
                     alpha = move_score
@@ -124,9 +135,11 @@ class Agent:
                     yield best_move
                     print(f"average effective branching factor: {self._num_branches_explored / self._num_plies_expanded:.2f}/{self._num_branches_enumerated / self._num_plies_expanded:.2f}")
 
+            if self._interrupted:
+                break
+
             print(f"complete search at depth {depth} in {format_secs(time() - time_start)}")
             depth += 1
-
 
     def _inverse_search(self, board, board_hash, perspective, depth, alpha, beta, color):
         if self._interrupted:
@@ -160,6 +173,10 @@ class Agent:
         self._num_branches_enumerated += len(moves)
 
         for move in moves:
+            if self._interrupted:
+                print("receive interrupt")
+                raise TimerInterrupt()
+
             move_board = apply_move(deepcopy(board), move)
             move_hash = update_hash(board_hash, board, move)
 
@@ -170,6 +187,7 @@ class Agent:
                 if move_score > alpha or move_score < beta:
                     move_score = -self._inverse_search(move_board, move_hash, perspective, depth - 1, -beta, -move_score, -color)
 
+            # print(player_unit, move, f"{move_score:.2f}")
             if move_score > best_score:
                 best_score = move_score
                 best_move = move

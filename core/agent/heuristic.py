@@ -6,7 +6,8 @@ from config import BOARD_SIZE, NUM_EJECTED_MARBLES_TO_WIN
 from debug.profiler import MeanProfiler
 
 
-WEIGHT_SCORE = 50
+WEIGHT_SCORE = 25
+WEIGHT_SCORE_OPPONENT = 50
 WEIGHT_CENTRALIZATION = 1
 WEIGHT_CENTRALIZATION_OPPONENT = 0.5
 WEIGHT_ADJACENCY = 0.1
@@ -27,6 +28,7 @@ def _heuristic_optimized(board, color):
     BOARD_CENTER = Hex(BOARD_RADIUS, BOARD_RADIUS)
 
     heuristic_score = MAX_MARBLES
+    heuristic_score_opponent = MAX_MARBLES
     heuristic_centralization = 0
     heuristic_centralization_opponent = 0
     heuristic_adjacency = 0
@@ -42,6 +44,7 @@ def _heuristic_optimized(board, color):
         if cell_color == color:
             heuristic_centralization += cell_centralization
             heuristic_adjacency += cell_adjacency
+            heuristic_score_opponent -= 1
         else:
             heuristic_centralization_opponent += cell_centralization
             heuristic_adjacency_opponent += cell_adjacency
@@ -49,10 +52,11 @@ def _heuristic_optimized(board, color):
 
     return (
         WEIGHT_SCORE * heuristic_score
+        - WEIGHT_SCORE_OPPONENT * heuristic_score_opponent
         + WEIGHT_CENTRALIZATION * heuristic_centralization
-        + WEIGHT_CENTRALIZATION_OPPONENT * heuristic_centralization_opponent
+        - WEIGHT_CENTRALIZATION_OPPONENT * heuristic_centralization_opponent
         + WEIGHT_ADJACENCY * heuristic_adjacency
-        + WEIGHT_ADJACENCY_OPPONENT * heuristic_adjacency_opponent
+        - WEIGHT_ADJACENCY_OPPONENT * heuristic_adjacency_opponent
     )
 
 def _heuristic_total(board, player_unit):
