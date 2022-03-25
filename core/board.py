@@ -66,12 +66,13 @@ class Board:
 
     def enumerate(self):
         if not self._items:
-            self._items = []
+            items = []
             for r, line in enumerate(self._data):
                 for q, val in enumerate(line):
                     q += self.offset(r)
                     item = (Hex(q, r), val)
-                    self._items.append(item)
+                    items.append(item)
+            self._items = items
         return self._items
 
     def fill(self, data):

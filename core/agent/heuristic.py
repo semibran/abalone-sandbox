@@ -2,11 +2,52 @@ from math import pow, inf
 from core.hex import Hex
 from core.board_cell_state import BoardCellState
 from core.game import find_board_score
-from config import NUM_EJECTED_MARBLES_TO_WIN
+from config import BOARD_SIZE, NUM_EJECTED_MARBLES_TO_WIN
+
+
+WEIGHT_SCORE = 50
+WEIGHT_CENTRALIZATION = 1
+WEIGHT_CENTRALIZATION_OPPONENT = 0.5
+WEIGHT_ADJACENCY = 0.1
+WEIGHT_ADJACENCY_OPPONENT = 0.05
 
 
 def heuristic(board, player_unit):
-    return _heuristic_total(board, player_unit)
+    return _heuristic_optimized(board, player_unit)
+
+def _heuristic_optimized(board, color):
+    MAX_MARBLES = 14
+    BOARD_RADIUS = BOARD_SIZE - 1
+    BOARD_CENTER = Hex(BOARD_RADIUS, BOARD_RADIUS)
+
+    heuristic_score = MAX_MARBLES
+    heuristic_centralization = 0
+    heuristic_centralization_opponent = 0
+    heuristic_adjacency = 0
+    heuristic_adjacency_opponent = 0
+
+    for cell, cell_color in board.enumerate():
+        if cell_color == BoardCellState.EMPTY:
+            continue
+
+        cell_centralization = BOARD_RADIUS - Hex.manhattan(cell, BOARD_CENTER) - 1
+        cell_adjacency = sum([board[n] == cell_color for n in Hex.neighbors(cell)])
+
+        if cell_color == color:
+            heuristic_centralization += cell_centralization
+            heuristic_adjacency += cell_adjacency
+        else:
+            heuristic_centralization_opponent += cell_centralization
+            heuristic_adjacency_opponent += cell_adjacency
+            heuristic_score -= 1
+
+    return (
+        WEIGHT_SCORE * heuristic_score
+        + WEIGHT_CENTRALIZATION * heuristic_centralization
+        + WEIGHT_CENTRALIZATION_OPPONENT * heuristic_centralization_opponent
+        + WEIGHT_ADJACENCY * heuristic_adjacency
+        + WEIGHT_ADJACENCY_OPPONENT * heuristic_adjacency_opponent
+    )
 
 def _heuristic_total(board, player_unit):
     return (
