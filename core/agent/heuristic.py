@@ -3,6 +3,7 @@ from core.hex import Hex
 from core.board_cell_state import BoardCellState
 from core.game import find_board_score
 from config import BOARD_SIZE, NUM_EJECTED_MARBLES_TO_WIN
+from debug.profiler import MeanProfiler
 
 
 WEIGHT_SCORE = 50
@@ -11,9 +12,14 @@ WEIGHT_CENTRALIZATION_OPPONENT = 0.5
 WEIGHT_ADJACENCY = 0.1
 WEIGHT_ADJACENCY_OPPONENT = 0.05
 
+profiler = MeanProfiler()
+
 
 def heuristic(board, player_unit):
-    return _heuristic_optimized(board, player_unit)
+    profiler.start()
+    score = _heuristic_optimized(board, player_unit)
+    profiler.stop(label="avg heuristic speed")
+    return score
 
 def _heuristic_optimized(board, color):
     MAX_MARBLES = 14
