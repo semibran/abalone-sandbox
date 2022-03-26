@@ -88,6 +88,8 @@ class Agent:
             yield moves[0] if moves else None
             return
 
+        old_branches_explored = self._num_branches_explored
+
         self._interrupted = False
         try:
             search_gen = self._gen_search(board, color)
@@ -96,16 +98,21 @@ class Agent:
                 yield best_move
         except (TimerInterrupt, StopIteration):
             self._interrupted = True
-        # finally:
-        #     main_line = _find_main_line(board, best_move, transposition_table=self._board_cache)
-        #     print(main_line)
+        finally:
+            # main_line = _find_main_line(board, best_move, transposition_table=self._board_cache)
+            # print(main_line)
+            new_branches_explored = self._num_branches_explored - old_branches_explored
+            print(f"explored {new_branches_explored} subtrees")
 
     def _gen_search(self, board, color):
         depth = 1
         best_move = None
         moves = enumerate_player_moves(board, color)
         board_hash = hash_board(board)
+        temp_board = deepcopy(board)
+
         time_start = time()
+
         while not self._interrupted:
             print(f"init search at depth {depth}")
             alpha = -inf
@@ -120,7 +127,8 @@ class Agent:
             self._num_branches_enumerated += len(moves)
 
             for move in moves:
-                move_board = apply_move(deepcopy(board), move)
+                temp_board.mimic(board)
+                move_board = apply_move(temp_board, move)
                 move_hash = update_hash(board_hash, board, move)
                 if move == moves[0]:
                     move_score = -self._inverse_search(move_board, move_hash, color, depth - 1, -inf, -alpha, -1)
@@ -140,6 +148,7 @@ class Agent:
 
             print(f"complete search at depth {depth} in {format_secs(time() - time_start)}")
             depth += 1
+
 
     def _inverse_search(self, board, board_hash, perspective, depth, alpha, beta, color):
         if self._interrupted:
@@ -164,6 +173,7 @@ class Agent:
         best_move = cached_entry.move if cached_entry else None
         alpha_old = alpha
         player_unit = perspective if color == 1 else BoardCellState.next(perspective)
+        temp_board = deepcopy(board)
         moves = enumerate_player_moves(board, player_unit)
         if best_move and best_move in moves:
             moves.remove(best_move)
@@ -177,7 +187,8 @@ class Agent:
                 print("receive interrupt")
                 raise TimerInterrupt()
 
-            move_board = apply_move(deepcopy(board), move)
+            temp_board.mimic(board)
+            move_board = apply_move(temp_board, move)
             move_hash = update_hash(board_hash, board, move)
 
             if move == moves[0]:
@@ -207,6 +218,9 @@ class Agent:
                 depth=depth,
             ))
 
+        cached_entry.score = best_score
+        cached_entry.move = best_move
+        cached_entry.depth = depth
         if board_hash not in self._board_cache:
             self._board_cache[board_hash] = cached_entry
 

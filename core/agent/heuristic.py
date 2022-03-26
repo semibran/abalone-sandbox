@@ -8,8 +8,8 @@ from debug.profiler import MeanProfiler
 
 WEIGHT_SCORE = 25
 WEIGHT_SCORE_OPPONENT = 50
-WEIGHT_CENTRALIZATION = 1
-WEIGHT_CENTRALIZATION_OPPONENT = 0.5
+WEIGHT_CENTRALIZATION = 2
+WEIGHT_CENTRALIZATION_OPPONENT = 1
 WEIGHT_ADJACENCY = 0.1
 WEIGHT_ADJACENCY_OPPONENT = 0.05
 
@@ -38,8 +38,8 @@ def _heuristic_optimized(board, color):
         if cell_color == BoardCellState.EMPTY:
             continue
 
-        cell_centralization = BOARD_RADIUS - Hex.manhattan(cell, BOARD_CENTER) - 1
-        cell_adjacency = sum([board[n] == cell_color for n in Hex.neighbors(cell)])
+        cell_centralization = BOARD_RADIUS - Hex.manhattan(cell, BOARD_CENTER)
+        cell_adjacency = pow(sum([board[n] == cell_color for n in Hex.neighbors(cell)]), 2)
 
         if cell_color == color:
             heuristic_centralization += cell_centralization

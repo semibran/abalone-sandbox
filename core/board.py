@@ -93,3 +93,11 @@ class Board:
     def fill(self, data):
         for cell, _ in self.enumerate():
             self[cell] = data
+
+    def mimic(self, board):
+        data = self._data
+        for r, line in enumerate(board._data):
+            for q, val in enumerate(line):
+                data[r][q] = val
+        self.__items = None
+        self.__items_nonempty = None
